@@ -1,20 +1,12 @@
 import os
-import pdb
-import time
-import shutil
 import numpy as np
-import random
-import cPickle as pickle
 
 import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import torch.distributed as dist
 import torch.optim
 import torch.utils.data
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 import torchvision.models as models
 import torch.nn.functional as F
 
@@ -24,14 +16,13 @@ from torch.autograd import Variable
 import utils.utils as utils
 
 # For data loader
-import prep_dataset.prep_sth_all as prep_sth_all
+import prep_dataset.prep_SBD_dataset as prep_SBD_dataset
 
 # For model
-from modules.temporal_relation_vanilla_rnn import VanillaRNN
-from modules.temporal_tree_cnn import TreeCNN
+from modules.CASENet import CASENet_resnet101
 
 # For training and validation
-import train_val.temporal_relation_rnn_play as model_play
+import train_val.model_play as model_play
 
 # For settings
 import config
@@ -42,18 +33,11 @@ def main():
     print("config:{0}".format(args))
 
     checkpoint_dir = os.path.join(args.checkpoint_folder, args.combine_type, args.basemodel_name+ \
-                    "_num_segments_"+str(args.num_segments)+ \
                     "_cnnlr_"+str(args.cnn_lr)+"_batch_"+ \
-                    str(args.batch_size))
-    model_log_dir = os.path.join(args.log_dir, args.combine_type, args.basemodel_name+ \
-                    "num_segments_"+str(args.num_segments)+ \
-                    "__cnnlr_"+str(args.cnn_lr)+"_batch_"+ \
                     str(args.batch_size))
 
     # For visualization using TensorBoard.
     global_step = 0
-    writer  = SummaryWriter(log_dir=model_log_dir)
-
     best_acc = 0
 
     train_loader, val_loader = prep_sth_all.get_dataloader(args)
@@ -89,16 +73,13 @@ def main():
     for epoch in range(args.start_epoch, args.epochs):
         curr_lr = utils.adjust_learning_rate(args, optimizer, epoch, args.lr_steps)
 
-        train_loader, val_loader = prep_random_sth.get_dataloader(args, epoch)
         global_step = model_play.train(args, train_loader, model, ce_criterion, optimizer, epoch, curr_lr,\
                                  writer, global_step)
     
-        #curr_acc = model_play.validate(args, val_loader, model, ce_criterion, epoch, writer, global_step)
-        val_loaders = prep_diff_num_frames_test.get_dataloader(args)
-        upperbound_acc = model_play.upperbound_validate(args, val_loaders, model, ce_criterion, 0, writer, global_step)
+        curr_acc = model_play.validate(args, val_loader, model, ce_criterion, epoch, writer, global_step)
 
-        if upperbound_acc > best_acc:
-            best_acc = upperbound_acc
+        if curr_acc > best_acc:
+            best_acc = curr_acc
             utils.save_checkpoint({
                 'epoch': epoch,
                 'state_dict': model.state_dict(),
