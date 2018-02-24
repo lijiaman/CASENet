@@ -18,17 +18,22 @@ class Bottleneck(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.scale_conv1 = ScaleLayer()
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
-                               padding=1, bias=False)
+
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
+                               dilation=2, padding=2, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
         self.scale_conv2 = ScaleLayer()
+
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
+        self.scale_conv3 = ScaleLayer()
+
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
+        self.scale_downsample = ScaleLayer()
         self.stride = stride
 
     def forward(self, x):
@@ -37,16 +42,20 @@ class Bottleneck(nn.Module):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.scale_conv1(out)
+        out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
+        out = self.scale_conv2(out)
         out = self.relu(out)
 
         out = self.conv3(out)
         out = self.bn3(out)
+        out = self.scale_conv3(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
+            residual = self.scale_downsample(residual)
 
         out += residual
         out = self.relu(out)
@@ -65,6 +74,7 @@ class ResNet(nn.Module):
         self.scale_conv1 = ScaleLayer()
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)
+
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
