@@ -32,7 +32,7 @@ def main():
     global args
     print("config:{0}".format(args))
 
-    checkpoint_dir = os.path.join(args.checkpoint_folder, args.combine_type, args.basemodel_name+ \
+    checkpoint_dir = os.path.join(args.checkpoint_folder, args.basemodel_name+ \
                     "_cnnlr_"+str(args.cnn_lr)+"_batch_"+ \
                     str(args.batch_size))
 
@@ -52,7 +52,6 @@ def main():
     else:
         model = model.cuda()
 
-    policies = get_optim_policies(model)
     optimizer = torch.optim.SGD(policies, lr=args.cnn_lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     cudnn.benchmark = True
