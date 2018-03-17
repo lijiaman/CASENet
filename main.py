@@ -41,7 +41,7 @@ def main():
     global_step = 0
     min_val_loss = 999999999
 
-    title = args.plot_name +' train|val loss '
+    title = 'train|val loss '
     init = np.NaN
     win = viz.line(
         X=np.column_stack((np.array([init]), np.array([init]))),
@@ -50,7 +50,7 @@ def main():
     )
 
     train_loader, val_loader = prep_SBD_dataset.get_dataloader(args)
-    model = CASENet_resnet101(args, num_classes=args.cls_num)
+    model = CASENet_resnet101(pretrained=False, num_classes=args.cls_num)
 
     if args.multigpu:
         model = torch.nn.DataParallel(model.cuda())
@@ -72,12 +72,12 @@ def main():
         optimizer.load_state_dict(checkpoint['optimizer'])
 
     for epoch in range(args.start_epoch, args.epochs):
-        curr_lr = utils.adjust_learning_rate(args, optimizer, global_step, args.lr_steps)
+        curr_lr = utils.adjust_learning_rate(args.lr, args, optimizer, global_step, args.lr_steps)
 
         global_step = model_play.train(args, train_loader, model, optimizer, epoch, curr_lr,\
                                  win, viz, global_step)
     
-        curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
+        #curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
         
         # Always store current model to avoid process crashed by accident.
         utils.save_checkpoint({

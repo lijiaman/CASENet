@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from torch.autograd import Variable
 import math
+import torchvision.models as models
 
 class ScaleLayer(nn.Module):
 
@@ -211,7 +212,7 @@ def CASENet_resnet101(pretrained=False, num_classes=20):
     """
     model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
+        model = models.__dict__['resnet101'](pretrained)
     return model
 
 if __name__ == "__main__":

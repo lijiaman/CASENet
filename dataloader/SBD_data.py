@@ -51,11 +51,12 @@ class SBDData(data.Dataset):
         zip_file = zipfile.ZipFile(label_path, 'r')
         tmp_folder = os.path.join("/ais/gobi4/fashion/edge_detection/tmp_npy", label_name.split('/')[-1])
         extract_data = zip_file.extract("label", tmp_folder)
-        label_tensor = torch.from_numpy(np.resize(np.load(os.path.join(tmp_folder, "label")), (self.input_size, self.input_size, 3)))
+        np_data = np.load(os.path.join(tmp_folder, "label"))
+        label_tensor = torch.from_numpy(np.resize(np_data, (self.input_size, self.input_size, np_data.shape[2])))
         shutil.rmtree(tmp_folder) 
         return processed_img, label_tensor
         # processed_img: 3 X 352 X 352
-        # label tensor: 352 X 352 X 3
+        # label tensor: 352 X 352 X 20
 
     def __len__(self):
         return len(self.ids)
