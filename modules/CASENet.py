@@ -219,4 +219,5 @@ if __name__ == "__main__":
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
     output1, output2  = model(input_var) 
-
+    print("output1.size:{0}".format(output1.size()))
+    print("output2.size:{0}".format(output2.size()))

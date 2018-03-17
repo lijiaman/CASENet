@@ -19,7 +19,7 @@ import utils.utils as utils
 from utils.utils import AverageMeter
 
 
-def train(args, train_loader, model, ce_criterion, optimizer, epoch, curr_lr, writer, global_step):
+def train(args, train_loader, model, optimizer, epoch, curr_lr, win, vis, global_step):
     batch_time = AverageMeter()
     data_time = AverageMeter()
 
@@ -32,27 +32,21 @@ def train(args, train_loader, model, ce_criterion, optimizer, epoch, curr_lr, wr
     model.train()
 
     end = time.time()
-    for i, (img_ori_list, target, seq_len, vidID) in enumerate(train_loader):
+    for i, (img, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-
+        
         # Input for Image CNN.
-        img_ori_input_var = utils.check_gpu(0, img_ori_list) # BS X segments*3 X H X W
-        
-        bs = img_ori_list.size()[0]
-
+        img_var = utils.check_gpu(0, img_ori_list) # BS X segments*3 X H X W
         target_var = utils.check_gpu(0, target)
-
-        # Go through the gate LSTM part to get the gate value for each frame.
-        rgb_cnn_out = \
-            model(img_ori_input_var) # BS X NUM_SEG X NUM_CLASSES
-
-        loss = ce_criterion(rgb_cnn_out[:,-1,:], target_var)
         
-        prec1, prec5 = utils.accuracy(rgb_cnn_out[:,-1,:].data, target_var.data, topk=(1, 5))
-        top1.update(prec1[0], bs)
-        top5.update(prec5[0], bs)
-      
+        bs = img.size()[0]
+
+        score_feats5, fused_feats = model(img_var) # BS X NUM_SEG X NUM_CLASSES
+       
+        feats5_loss = WeightedMultiLabelSigmoidLoss(score_feats5, target_var) 
+        fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
+        
         total_losses.update(loss.data[0], bs)
 
         optimizer.zero_grad()
@@ -70,13 +64,17 @@ def train(args, train_loader, model, ce_criterion, optimizer, epoch, curr_lr, wr
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Total Loss {total_loss.val:.4f} ({total_loss.avg:.4f})\n'
                   'lr {learning_rate:.6f}\t'
-                  'Top1 Acc {acc1.val:.4f} ({acc1.avg:.4f})\t'
-                  'Top5 Acc {acc5.val:.4f} ({acc5.avg:.4f})\n'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses, 
-                   learning_rate=curr_lr,acc1=top1, acc5=top5))
+                   learning_rate=curr_lr))
         
         global_step += 1
 
     return global_step
 
+def WeightedMultiLabelSigmoidLoss(model_output, target):
+    """
+    model_output: BS X NUM_CLASSES X H X W
+    target: BS X NUM_CLASSES X H X W 
+    """
+    pass

@@ -16,11 +16,14 @@ def get_args():
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
+    
+    parser.add_argument('--cls-num', default=20, type=int, metavar='N',
+                        help='the number of classes')
 
     parser.add_argument('--lr-steps', default=[50, 100], type=int, nargs="+",
                         metavar='LRSteps', help='epochs to decay learning rate by 10')
     
-    parser.add_argument('-b', '--batch-size', default=64, type=int,
+    parser.add_argument('-b', '--batch-size', default=16, type=int,
                         metavar='N', help='mini-batch size (default: 1)')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
