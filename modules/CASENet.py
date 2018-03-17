@@ -204,12 +204,12 @@ class ResNet(nn.Module):
         return cropped_score_feats5, fused_feats
 
 
-def CASENet_resnet101(pretrained=False, **kwargs):
+def CASENet_resnet101(pretrained=False, num_classes=20):
     """Constructs a modified ResNet-101 model for CASENet.
     Args:
         pretrained (bool): If True, returns a model pre-trained on MSCOCO
     """
-    model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+    model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
     return model

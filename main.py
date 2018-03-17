@@ -24,6 +24,10 @@ from modules.CASENet import CASENet_resnet101
 # For training and validation
 import train_val.model_play as model_play
 
+# For visualization
+import visdom
+viz = visdom.Visdom(server="http://cluster7.ais.sandbox", port=22222, env='CASENet-SBD')
+
 # For settings
 import config
 
@@ -32,60 +36,66 @@ def main():
     global args
     print("config:{0}".format(args))
 
-    checkpoint_dir = os.path.join(args.checkpoint_folder, args.basemodel_name+ \
-                    "_cnnlr_"+str(args.cnn_lr)+"_batch_"+ \
-                    str(args.batch_size))
+    checkpoint_dir = args.checkpoint_folder
 
-    # For visualization using TensorBoard.
     global_step = 0
-    best_acc = 0
+    min_val_loss = 999999999
 
-    train_loader, val_loader = prep_sth_all.get_dataloader(args)
-    model = TreeCNN(args, num_segments=args.num_segments, \
-                    D_feats=args.input_size, img_feats=args.img_feats, \
-                    num_classes=args.num_classes, base_cnn_name=args.basemodel_name)
+    title = args.plot_name +' train|val loss '
+    init = np.NaN
+    win = viz.line(
+        X=np.column_stack((np.array([init]), np.array([init]))),
+        Y=np.column_stack((np.array([init]), np.array([init]))),
+        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train', 'val']},
+    )
+
+    train_loader, val_loader = prep_SBD_dataset.get_dataloader(args)
+    model = CASENet_resnet101(args, num_classes=args.cls_num)
+
     if args.multigpu:
-        model.cnn_net = torch.nn.DataParallel(model.cnn_net.cuda())
-        model.new_fc = model.new_fc.cuda()
-        model.shared_fc = model.shared_fc.cuda()
-        model.top_cls = model.top_cls.cuda()
+        model = torch.nn.DataParallel(model.cuda())
     else:
         model = model.cuda()
 
-    optimizer = torch.optim.SGD(policies, lr=args.cnn_lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     cudnn.benchmark = True
 
-    ce_criterion = nn.CrossEntropyLoss().cuda()
-    
     if args.pretrained_model:
         utils.load_pretrained_model(model, args.pretrained_model)
-        pretrained_acc = model_play.validate(args, val_loader, model, ce_criterion, 0, writer, global_step)
 
     if args.resume_model:
         checkpoint = torch.load(args.resume_model)
         args.start_epoch = checkpoint['epoch']
-        best_prec1 = checkpoint['best_acc']
+        min_val_loss = checkpoint['min_loss']
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
 
     for epoch in range(args.start_epoch, args.epochs):
-        curr_lr = utils.adjust_learning_rate(args, optimizer, epoch, args.lr_steps)
+        curr_lr = utils.adjust_learning_rate(args, optimizer, global_step, args.lr_steps)
 
-        global_step = model_play.train(args, train_loader, model, ce_criterion, optimizer, epoch, curr_lr,\
-                                 writer, global_step)
+        global_step = model_play.train(args, train_loader, model, optimizer, epoch, curr_lr,\
+                                 win, viz, global_step)
     
-        curr_acc = model_play.validate(args, val_loader, model, ce_criterion, epoch, writer, global_step)
+        curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
+        
+        # Always store current model to avoid process crashed by accident.
+        utils.save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'optimizer' : optimizer.state_dict(),
+            'min_loss': min_val_loss,
+        }, epoch, folder=checkpoint_dir)
 
-        if curr_acc > best_acc:
-            best_acc = curr_acc
+        if curr_loss < min_val_loss:
+            min_val_loss = curr_loss
             utils.save_checkpoint({
                 'epoch': epoch,
                 'state_dict': model.state_dict(),
                 'optimizer' : optimizer.state_dict(),
-                'best_acc': best_acc,
-            }, epoch, best_acc, folder=checkpoint_dir)
-            print("Best Acc is {0}, in {1} epoch.".format(best_acc, epoch))
+                'min_loss': min_val_loss,
+            }, epoch, folder=checkpoint_dir)
+            print("Min loss is {0}, in {1} epoch.".format(min_val_loss, epoch))
 
 if __name__ == '__main__':
     main()
