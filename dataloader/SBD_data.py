@@ -54,6 +54,8 @@ class SBDData(data.Dataset):
         label_tensor = torch.from_numpy(np.resize(np.load(os.path.join(tmp_folder, "label")), (self.input_size, self.input_size, 3)))
         shutil.rmtree(tmp_folder) 
         return processed_img, label_tensor
+        # processed_img: 3 X 352 X 352
+        # label tensor: 352 X 352 X 3
 
     def __len__(self):
         return len(self.ids)

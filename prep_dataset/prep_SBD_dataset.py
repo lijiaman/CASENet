@@ -55,17 +55,13 @@ def get_dataloader(args):
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
-    # /2 because sometimes the same batch made validation out of memory.
     
     return train_loader, val_loader
 
 if __name__ == "__main__":
     args = config.get_args()
     train_loader, val_loader = get_dataloader(args)
-    start_time = time.time()
     for i, (img, target) in enumerate(val_loader):
-        end_time = time.time()
-        print("time:{0}".format(end_time-start_time))
         print("target.size():{0}".format(target.size()))
         print("target:{0}".format(target))
 
