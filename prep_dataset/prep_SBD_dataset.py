@@ -19,8 +19,7 @@ def get_dataloader(args):
     # Define data files path.
     root_img_folder = "/ais/gobi4/fashion/edge_detection/data_aug" 
     root_label_folder = "/ais/gobi4/fashion/edge_detection/data_aug"
-    train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
-    #train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_train_aug.txt"
+    train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_train_aug.txt"
     val_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
 
     input_size = 352
