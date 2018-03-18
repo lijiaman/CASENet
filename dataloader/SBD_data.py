@@ -43,13 +43,12 @@ class SBDData(data.Dataset):
 
         # Load img into tensor
         img = Image.open(img_path).convert('RGB')
-        h, w = img.size
         processed_img = self.img_transform(img)
 
         # Load label into tensor
         # Read zip file and extract to npy, then load npy to numpy, delete numpy finally.
         zip_file = zipfile.ZipFile(label_path, 'r')
-        tmp_folder = os.path.join("/ais/gobi4/fashion/edge_detection/tmp_npy", label_name.split('/')[-1])
+        tmp_folder = os.path.join("/ais/gobi4/fashion/edge_detection/tmp_npy", label_name.split('/')[-2], label_name.split('/')[-1])
         extract_data = zip_file.extract("label", tmp_folder)
         np_data = np.load(os.path.join(tmp_folder, "label"))
         label_tensor = torch.from_numpy(np.resize(np_data, (self.input_size, self.input_size, np_data.shape[2])))

@@ -34,13 +34,12 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
         data_time.update(time.time() - end)
         
         # Input for Image CNN.
-        img_var = utils.check_gpu(0, img) # BS X segments*3 X H X W
-        target_var = utils.check_gpu(0, target)
+        img_var = utils.check_gpu(0, img) # BS X 3 X H X W
+        target_var = utils.check_gpu(0, target) # BS X H X W X NUM_CLASSES
         
         bs = img.size()[0]
 
-        print("img_var.size:{0}".format(img_var.size()))
-        score_feats5, fused_feats = model(img_var) # BS X NUM_SEG X NUM_CLASSES
+        score_feats5, fused_feats = model(img_var) # BS X NUM_CLASSES X 352 X 352
        
         feats5_loss = WeightedMultiLabelSigmoidLoss(score_feats5, target_var) 
         fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
@@ -65,7 +64,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Total Loss {total_loss.val:.4f} ({total_loss.avg:.4f})\n'
-                  'lr {learning_rate:.6f}\t'
+                  'lr {learning_rate:.9f}\t'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses, 
                    learning_rate=curr_lr))
@@ -73,6 +72,52 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
         global_step += 1
 
     return global_step
+
+def validate(args, val_loader, model, epoch, win, viz, global_step):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+
+    total_losses = AverageMeter()
+    
+    # switch to train mode
+    model.eval()
+
+    end = time.time()
+    for i, (img, target) in enumerate(val_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+        
+        # Input for Image CNN.
+        img_var = utils.check_gpu(0, img) # BS X 3 X H X W
+        target_var = utils.check_gpu(0, target) # BS X H X W X NUM_CLASSES
+        
+        bs = img.size()[0]
+
+        score_feats5, fused_feats = model(img_var) # BS X NUM_CLASSES X 352 X 352
+       
+        feats5_loss = WeightedMultiLabelSigmoidLoss(score_feats5, target_var) 
+        fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
+        loss = feats5_loss + fused_feats_loss
+             
+        total_losses.update(loss.data[0], bs)
+
+        val_cls_loss = loss.clone().cpu().data.numpy()[0]
+        viz.line(win=win, name='val', update='append', X=np.array([global_step]), Y=np.array([val_cls_loss]))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if (i % args.print_freq == 0):
+            print("\n\n")
+            print('Epoch: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Total Loss {total_loss.val:.4f} ({total_loss.avg:.4f})\n'
+                  .format(epoch, i, len(val_loader), batch_time=batch_time,
+                   data_time=data_time, total_loss=total_losses))
+        
+    return total_losses.avg 
 
 def WeightedMultiLabelSigmoidLoss(model_output, target):
     """
@@ -89,6 +134,6 @@ def WeightedMultiLabelSigmoidLoss(model_output, target):
     target = target.transpose(1,3).transpose(2,3).float() # BS X NUM_CLASSES X H X W
     loss = -non_edge_weight.unsqueeze(2).unsqueeze(3)*target*torch.log(one_sigmoid_out.clamp(min=1e-10)) - \
             edge_weight.unsqueeze(2).unsqueeze(3)*(1-target)*torch.log(zero_sigmoid_out.clamp(min=1e-10))
-
-    return loss.mean()
+    
+    return loss.mean(dim=0).sum()
 

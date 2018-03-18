@@ -50,7 +50,7 @@ def main():
     )
 
     train_loader, val_loader = prep_SBD_dataset.get_dataloader(args)
-    model = CASENet_resnet101(pretrained=False, num_classes=args.cls_num)
+    model = CASENet_resnet101(pretrained=True, num_classes=args.cls_num)
 
     if args.multigpu:
         model = torch.nn.DataParallel(model.cuda())
@@ -77,7 +77,7 @@ def main():
         global_step = model_play.train(args, train_loader, model, optimizer, epoch, curr_lr,\
                                  win, viz, global_step)
     
-        #curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
+        curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
         
         # Always store current model to avoid process crashed by accident.
         utils.save_checkpoint({

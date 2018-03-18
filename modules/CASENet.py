@@ -3,6 +3,10 @@ import torch
 from torch.autograd import Variable
 import math
 import torchvision.models as models
+import sys
+sys.path.append("../")
+
+import utils.utils as utils
 
 class ScaleLayer(nn.Module):
 
@@ -212,11 +216,11 @@ def CASENet_resnet101(pretrained=False, num_classes=20):
     """
     model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
     if pretrained:
-        model = models.__dict__['resnet101'](pretrained)
+        utils.load_official_pretrained_model(model, "/ais/gobi5/jiaman/torch/models/resnet101-5d3b4d8f.pth") 
     return model
 
 if __name__ == "__main__":
-    model = CASENet_resnet101(num_classes=20)
+    model = CASENet_resnet101(pretrained=True, num_classes=20)
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
     output1, output2  = model(input_var) 

@@ -87,6 +87,26 @@ def load_pretrained_model(model, pretrained_model_path):
     # 3. load the new state dict
     model.load_state_dict(model_dict)
 
+def load_official_pretrained_model(model, pretrained_model_path):
+    # Load trained model.
+    trained_model = torch.load(pretrained_model_path)
+    model_dict = model.state_dict()
+    
+    for k in trained_model.keys():
+        print("{0} exists in ori pretrained model".format(k))
+    for k in model_dict.keys():
+        print("{0} exists in ori model".format(k))
+
+    updated_pretrained_dict = {k: v for k, v in trained_model.items() if (k in model_dict)}
+
+    for k in updated_pretrained_dict.keys():
+        print("{0} is loaded successfully".format(k))
+    
+    # overwrite entries in the existing state dict
+    model_dict.update(updated_pretrained_dict)
+    # load the new state dict
+    model.load_state_dict(model_dict)
+
 def save_checkpoint(state, epoch, folder, filename='min_loss_checkpoint.pth.tar'):
     if not os.path.exists(folder):
         os.makedirs(folder)
