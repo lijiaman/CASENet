@@ -23,7 +23,7 @@ def get_dataloader(args):
     val_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
 
     input_size = 352
-    normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1])
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     train_dataset = SBDData(
         root_img_folder,
