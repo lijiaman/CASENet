@@ -101,9 +101,6 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
              
         total_losses.update(loss.data[0], bs)
 
-        val_cls_loss = loss.clone().cpu().data.numpy()[0]
-        viz.line(win=win, name='val', update='append', X=np.array([global_step]), Y=np.array([val_cls_loss]))
-
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -117,6 +114,7 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
                   .format(epoch, i, len(val_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses))
         
+    viz.line(win=win, name='val', update='append', X=np.array([global_step]), Y=np.array([total_losses.avg]))
     return total_losses.avg 
 
 def WeightedMultiLabelSigmoidLoss(model_output, target):
