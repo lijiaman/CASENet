@@ -24,7 +24,7 @@ def convert_num_to_bitfield(label_data, h, w, npz_name, root_folder, cls_num=20)
     os.remove(os.path.join(root_folder, npz_name))
 
 if __name__ == "__main__":
-    f = open("list_train_aug.txt", 'r')
+    f = open("list_train.txt", 'r')
     lines = f.readlines()
     root_folder = "/ais/gobi4/fashion/edge_detection/data_aug/"
     cnt = 0
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         img_path = os.path.join(root_folder, img_name)
 
         img = Image.open(img_path).convert('RGB')
-        h, w = img.size
+        w, h = img.size # Notice: not h, w! This is very important! Otherwise, the label is wrong for each pixel.
 
         label_data = np.fromfile(label_path, dtype=np.uint32)
         npz_name = bin_name.replace("bin", "npy")
