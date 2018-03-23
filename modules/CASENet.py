@@ -208,6 +208,31 @@ class ResNet(nn.Module):
         
         return cropped_score_feats5, fused_feats
 
+    def forward_for_vis(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x) # BS X 64 X 352 X 352
+        score_feats1 = self.score_side1(x)
+        
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        score_feats2 = self.score_side2(x)
+        cropped_score_feats2 = self.crop_layer(score_feats2, offset=1)
+
+        x = self.layer2(x)
+        score_feats3 = self.score_side3(x)
+        cropped_score_feats3 = self.crop_layer(score_feats3, offset=2)
+        
+        x = self.layer3(x)
+        x = self.layer4(x)
+        score_feats5 = self.score_side5(x)
+        cropped_score_feats5 = self.crop_layer(score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
+        sliced_list = self.slice_layer(cropped_score_feats5) # Each element is BS X 1 X 352 X 352
+        concat_feats = self.concat_layer(sliced_list, dim=1) # BS X 20 X 352 X 352
+        fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
+        
+        return score_feats1, cropped_score_feats2, cropped_score_feats3, cropped_score_feats5, fused_feats
 
 def CASENet_resnet101(pretrained=False, num_classes=20):
     """Constructs a modified ResNet-101 model for CASENet.
@@ -226,3 +251,9 @@ if __name__ == "__main__":
     output1, output2  = model(input_var) 
     print("output1.size:{0}".format(output1.size()))
     print("output2.size:{0}".format(output2.size()))
+    feats1, feats2, feats3, feats5, fused_feats = model.forward_for_vis(input_var)
+    print("feats1.size:{0}".format(feats1.size()))
+    print("feats2.size:{0}".format(feats2.size()))
+    print("feats3.size:{0}".format(feats3.size()))
+    print("feats5.size:{0}".format(feats5.size()))
+    print("fused feats.size:{0}".format(fused_feats.size()))
