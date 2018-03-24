@@ -114,7 +114,7 @@ for idx_img in xrange(len(test_lst)):
         side_cls_i = side_cls[:, :, idx_cls]
         im = (side_cls_i * 255).astype(np.uint8)
         cv.imwrite(
-            os.path.join(args.output_dir, img_base_name_noext+'_'+'feats5'+'_'+cls_names[idx_cls]+'.png'),
+            os.path.join(args.output_dir, img_base_name_noext+'_'+'feats5'+'_'+cls_names[num_cls-idx_cls-1]+'.png'),
             im)
 
     print 'processed: '+test_lst[idx_img]
