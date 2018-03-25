@@ -39,6 +39,7 @@ class SBDData(data.Dataset):
             cnt += 1
 
     def __getitem__(self, index):
+        index = 0
         img_name = self.idx2name_dict[index]['img']
         label_name = self.idx2name_dict[index]['label']
         img_path = os.path.join(self.img_folder, img_name)

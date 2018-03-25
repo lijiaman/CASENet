@@ -85,7 +85,7 @@ def main():
             'state_dict': model.state_dict(),
             'optimizer' : optimizer.state_dict(),
             'min_loss': min_val_loss,
-        }, epoch, folder=checkpoint_dir)
+        }, epoch, folder=checkpoint_dir, filename="curr_checkpoint.pth.tar")
 
         if curr_loss < min_val_loss:
             min_val_loss = curr_loss
