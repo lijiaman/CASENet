@@ -63,7 +63,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Total Loss {total_loss.val:.4f} ({total_loss.avg:.4f})\n'
+                  'Total Loss {total_loss.val:.11f} ({total_loss.avg:.11f})\n'
                   'lr {learning_rate:.9f}\t'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses, 
@@ -133,5 +133,6 @@ def WeightedMultiLabelSigmoidLoss(model_output, target):
     loss = -non_edge_weight.unsqueeze(2).unsqueeze(3)*target*torch.log(one_sigmoid_out.clamp(min=1e-10)) - \
             edge_weight.unsqueeze(2).unsqueeze(3)*(1-target)*torch.log(zero_sigmoid_out.clamp(min=1e-10))
     
-    return loss.mean(dim=0).sum()
+    return loss.mean()
+    # return loss.mean(dim=0).sum()
 

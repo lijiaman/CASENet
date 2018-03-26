@@ -25,9 +25,6 @@ def get_dataloader(args):
     train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
     #train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_train.txt"
     val_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
-    train_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/test_label_binary_np.h5"
-    #train_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/train_label_binary_np.h5"
-    val_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/test_label_binary_np.h5"
 
     input_size = 352
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -36,8 +33,6 @@ def get_dataloader(args):
         root_img_folder,
         root_label_folder,
         train_anno_txt,
-        train_hdf5_file,
-        input_size,
         cls_num=args.cls_num,
         img_transform = transforms.Compose([
                         transforms.Resize([input_size, input_size]),
@@ -57,8 +52,6 @@ def get_dataloader(args):
         root_img_folder,
         root_label_folder,
         val_anno_txt,
-        val_hdf5_file,
-        input_size,
         cls_num=args.cls_num,
         img_transform = transforms.Compose([
                         transforms.Resize([input_size, input_size]),
