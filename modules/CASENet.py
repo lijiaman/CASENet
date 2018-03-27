@@ -131,23 +131,23 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=1, special_case=True) # Notice official resnet is 2, but CASENet here is 1.
 
         # Added by CASENet to get feature map from each branch in different scales.
-        self.score_side1 = nn.Conv2d(64, 1, kernel_size=1, bias=False)
+        self.score_side1 = nn.Conv2d(64, 1, kernel_size=1, bias=True)
         self.score_side2 = nn.Sequential(
-            nn.Conv2d(256, 1, kernel_size=1, bias=False),
+            nn.Conv2d(256, 1, kernel_size=1, bias=True),
             nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
         
         self.score_side3 = nn.Sequential(
-            nn.Conv2d(512, 1, kernel_size=1, bias=False),
+            nn.Conv2d(512, 1, kernel_size=1, bias=True),
             nn.ConvTranspose2d(1, 1, kernel_size=8, stride=4, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
         
         self.score_side5 = nn.Sequential(
-            nn.Conv2d(2048, num_classes, kernel_size=1, bias=False),
-            nn.ConvTranspose2d(num_classes, num_classes, kernel_size=16, stride=8, bias=False)
+            nn.Conv2d(2048, num_classes, kernel_size=1, bias=True),
+            nn.ConvTranspose2d(num_classes, num_classes, kernel_size=16, stride=8, groups=num_classes, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
 
-        self.score_fusion = nn.Conv2d(num_classes, num_classes, kernel_size=1)
+        self.score_fusion = nn.Conv2d(num_classes*4, num_classes, kernel_size=1, groups=num_classes, bias=True)
 
         # Define crop, concat layer
         self.crop_layer = CropLayer()
@@ -185,25 +185,35 @@ class ResNet(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
+        x = self.scale_conv1(x)
         x = self.relu(x) # BS X 64 X 352 X 352
-        score_feats1 = self.score_side1(x)
+        score_feats1 = self.score_side1(x) # BS X 1 X 352 X 352
         
-        x = self.maxpool(x)
+        x = self.maxpool(x) # BS X 64 X 175 X 175
+        
+        x = self.layer1(x) # BS X 256 X 175 X 175
+        score_feats2 = self.score_side2(x) # BS X 1 X 352 X 352
+        cropped_score_feats2 = score_feats2 # Here don't need to crop. (In official caffe, there's crop)
 
-        x = self.layer1(x)
-        score_feats2 = self.score_side2(x)
-        cropped_score_feats2 = self.crop_layer(score_feats2, offset=1)
-
-        x = self.layer2(x)
-        score_feats3 = self.score_side3(x)
-        cropped_score_feats3 = self.crop_layer(score_feats3, offset=2)
+        x = self.layer2(x) # BS X 512 X 88 X 88
+        score_feats3 = self.score_side3(x) # BS X 1 X 356 X 356
+        cropped_score_feats3 = self.crop_layer(score_feats3, offset=2) # BS X 1 X 352 X 352
         
         x = self.layer3(x)
         x = self.layer4(x)
         score_feats5 = self.score_side5(x)
         cropped_score_feats5 = self.crop_layer(score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
         sliced_list = self.slice_layer(cropped_score_feats5) # Each element is BS X 1 X 352 X 352
-        concat_feats = self.concat_layer(sliced_list, dim=1) # BS X 20 X 352 X 352
+        
+        # Add low-level feats to sliced_list
+        final_sliced_list = []
+        for i in xrange(len(sliced_list)):
+            final_sliced_list.append(sliced_list[i])
+            final_sliced_list.append(score_feats1)
+            final_sliced_list.append(cropped_score_feats2)
+            final_sliced_list.append(cropped_score_feats3)
+        
+        concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 20 X 352 X 352
         fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
         
         return cropped_score_feats5, fused_feats
@@ -218,7 +228,7 @@ class ResNet(nn.Module):
 
         x = self.layer1(x)
         score_feats2 = self.score_side2(x)
-        cropped_score_feats2 = self.crop_layer(score_feats2, offset=1)
+        cropped_score_feats2 = score_feats2
 
         x = self.layer2(x)
         score_feats3 = self.score_side3(x)
@@ -229,7 +239,16 @@ class ResNet(nn.Module):
         score_feats5 = self.score_side5(x)
         cropped_score_feats5 = self.crop_layer(score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
         sliced_list = self.slice_layer(cropped_score_feats5) # Each element is BS X 1 X 352 X 352
-        concat_feats = self.concat_layer(sliced_list, dim=1) # BS X 20 X 352 X 352
+        
+        # Add low-level feats to sliced_list
+        final_sliced_list = []
+        for i in xrange(len(sliced_list)):
+            final_sliced_list.append(sliced_list[i])
+            final_sliced_list.append(score_feats1)
+            final_sliced_list.append(cropped_score_feats2)
+            final_sliced_list.append(cropped_score_feats3)
+
+        concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 80 X 352 X 352
         fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
         
         return score_feats1, cropped_score_feats2, cropped_score_feats3, cropped_score_feats5, fused_feats
