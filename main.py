@@ -57,7 +57,8 @@ def main():
     else:
         model = model.cuda()
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    policies = get_model_policy(model)
+    optimizer = torch.optim.SGD(policies, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     cudnn.benchmark = True
 
@@ -96,6 +97,27 @@ def main():
                 'min_loss': min_val_loss,
             }, epoch, folder=checkpoint_dir)
             print("Min loss is {0}, in {1} epoch.".format(min_val_loss, epoch))
+
+def get_model_policy(model):
+    score_feats_conv_weight = []
+    score_feats_conv_bias = []
+    other_pts = []
+    for m in model.named_modules():
+        if m[0] != '':
+            if 'score' in m[0] and isinstance(m[1], torch.nn.Conv2d):
+                ps = list(m[1].parameters())
+                score_feats_conv_weight.append(ps[0])
+                if len(ps) == 2:
+                    score_feats_conv_bias.append(ps[1])
+            elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
+                ps = list(m[1].parameters())
+                other_pts.extend(ps)
+
+    return [
+            {'params': score_feats_conv_weight, 'lr_mult': 10, 'name': 'score_conv_weight'},
+            {'params': score_feats_conv_bias, 'lr_mult': 20, 'name': 'score_conv_bias'},
+            {'params': other_pts, 'lr_mult': 1, 'name': 'other'},
+    ]
 
 if __name__ == '__main__':
     main()
