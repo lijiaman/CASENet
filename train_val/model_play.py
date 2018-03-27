@@ -133,6 +133,5 @@ def WeightedMultiLabelSigmoidLoss(model_output, target):
     loss = -non_edge_weight.unsqueeze(2).unsqueeze(3)*target*torch.log(one_sigmoid_out.clamp(min=1e-10)) - \
             edge_weight.unsqueeze(2).unsqueeze(3)*(1-target)*torch.log(zero_sigmoid_out.clamp(min=1e-10))
     
-    return loss.mean()
-    # return loss.mean(dim=0).sum()
+    return loss.mean(dim=0).sum()
 

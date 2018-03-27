@@ -213,7 +213,7 @@ class ResNet(nn.Module):
             final_sliced_list.append(cropped_score_feats2)
             final_sliced_list.append(cropped_score_feats3)
         
-        concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 20 X 352 X 352
+        concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 80 X 352 X 352
         fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
         
         return cropped_score_feats5, fused_feats

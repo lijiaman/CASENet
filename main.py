@@ -66,7 +66,7 @@ def main():
 
     if args.resume_model:
         checkpoint = torch.load(args.resume_model)
-        args.start_epoch = checkpoint['epoch']
+        args.start_epoch = checkpoint['epoch']+1
         min_val_loss = checkpoint['min_loss']
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
