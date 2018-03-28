@@ -103,7 +103,7 @@ def get_model_policy(model):
     score_feats_conv_bias = []
     other_pts = []
     for m in model.named_modules():
-        if m[0] != '':
+        if m[0] != '' and m[0] != 'module':
             if 'score' in m[0] and isinstance(m[1], torch.nn.Conv2d):
                 ps = list(m[1].parameters())
                 score_feats_conv_weight.append(ps[0])
@@ -112,7 +112,6 @@ def get_model_policy(model):
             elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
                 ps = list(m[1].parameters())
                 other_pts.extend(ps)
-
     return [
             {'params': score_feats_conv_weight, 'lr_mult': 10, 'name': 'score_conv_weight'},
             {'params': score_feats_conv_bias, 'lr_mult': 20, 'name': 'score_conv_bias'},

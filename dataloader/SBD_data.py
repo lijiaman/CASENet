@@ -41,10 +41,9 @@ class SBDData(data.Dataset):
             self.idx2name_dict[cnt]['label'] = label_name
             self.ids.append(cnt)
             cnt += 1
-            break; # For temporal testing fit 1 sample
+            # break; # For temporal testing fit 1 sample
 
     def __getitem__(self, index):
-        index = 0
         img_name = self.idx2name_dict[index]['img']
         label_name = self.idx2name_dict[index]['label']
         img_path = os.path.join(self.img_folder, img_name)

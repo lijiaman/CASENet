@@ -1,7 +1,8 @@
-srun --gres=gpu:1 -c 4 -w guppy36 -p gpuc python main.py \
---lr=0.1 \
---batch-size=1 \
---workers=8 \
---epochs=300000 \
---lr-steps 2500 5000 7500 10000 \
-2>&1|tee train_b4_lr0.1.log
+srun --gres=gpu:2 -c 8 -w guppy34 -p gpuc python main.py \
+--multigpu \
+--lr=1e-7 \
+--batch-size=2 \
+--workers=1 \
+--epochs=40000 \
+--lr-steps 10000 20000 30000 \
+2>&1|tee train_b10_lr1e-7.log
