@@ -18,6 +18,40 @@ from dataloader.SBD_data import SBDData
 
 import config
 
+class RGB2BGR(object):
+
+    def __init__(self, roll=False):
+        self.roll = roll
+
+    def __call__(self, img):
+        if img.mode == 'L':
+            return np.concatenate([np.expand_dims(img, 2)], axis=2) 
+        elif img.mode == 'RGB':
+            if self.roll:
+                return np.concatenate([np.array(img)[:, :, ::-1]], axis=2)
+            else:
+                return img
+
+class ToTorchFormatTensor(object):
+    """ Converts a PIL.Image (RGB) or numpy.ndarray (H x W x C) in the range [0, 255]
+    to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0] """
+    def __init__(self, div=True):
+        self.div = div
+
+    def __call__(self, pic):
+        if isinstance(pic, np.ndarray):
+            # handle numpy array
+            img = torch.from_numpy(pic).permute(2, 0, 1).contiguous()
+        else:
+            # handle PIL Image
+            img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
+            img = img.view(pic.size[1], pic.size[0], len(pic.mode))
+            # put it from HWC to CHW format
+            # yikes, this transpose takes 80% of the loading time/CPU
+            img = img.transpose(0, 1).transpose(0, 2).contiguous()
+        
+        return img.float().div(255) if self.div else img.float()
+
 def get_dataloader(args):
     # Define data files path.
     root_img_folder = "/ais/gobi4/fashion/edge_detection/data_aug" 
@@ -30,7 +64,8 @@ def get_dataloader(args):
     val_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/test_label_binary_np.h5"
 
     input_size = 352
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])
 
     train_dataset = SBDData(
         root_img_folder,
@@ -41,7 +76,8 @@ def get_dataloader(args):
         cls_num=args.cls_num,
         img_transform = transforms.Compose([
                         transforms.Resize([input_size, input_size]),
-                        transforms.ToTensor(),
+                        RGB2BGR(roll=True),
+                        ToTorchFormatTensor(div=False),
                         normalize,
                         ]),
         label_transform = transforms.Compose([
@@ -62,7 +98,8 @@ def get_dataloader(args):
         cls_num=args.cls_num,
         img_transform = transforms.Compose([
                         transforms.Resize([input_size, input_size]),
-                        transforms.ToTensor(),
+                        RGB2BGR(roll=True),
+                        ToTorchFormatTensor(div=False),
                         normalize,
                         ]),
         label_transform = transforms.Compose([

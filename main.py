@@ -109,7 +109,8 @@ def get_model_policy(model):
                 score_feats_conv_weight.append(ps[0])
                 if len(ps) == 2:
                     score_feats_conv_bias.append(ps[1])
-            elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
+            else:
+            # elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
             # elif (not m[0].split('.')[-1].startswith('score_conv')) and (isinstance(m[1], torch.nn.Conv2d) or isinstance(m[1], ScaleLayer))
                 ps = list(m[1].parameters())
                 other_pts.extend(ps)

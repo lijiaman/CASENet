@@ -47,7 +47,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
              
         total_losses.update(loss.data[0], bs)
 
-        trn_cls_loss = loss.clone().cpu().data.numpy()[0]
+        trn_cls_loss = fused_feats_loss.clone().cpu().data.numpy()[0]
         viz.line(win=win, name='train', update='append', X=np.array([global_step]), Y=np.array([trn_cls_loss]))
 
         optimizer.zero_grad()
@@ -99,7 +99,7 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
         fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
         loss = feats5_loss + fused_feats_loss
              
-        total_losses.update(loss.data[0], bs)
+        total_losses.update(fused_feats_loss.data[0], bs)
 
         # measure elapsed time
         batch_time.update(time.time() - end)

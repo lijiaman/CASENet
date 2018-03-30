@@ -13,7 +13,6 @@ import os
 def gen_mapping_layer_name(model):
     layer_to_name_dict = {} # key is module name in currrent model, value is the filename of numpy
     for (m_name, m) in model.named_parameters():
-        print("m_name:{0}".format(m_name))
         if not "res" in m_name: # This case, name is totally the same.
             if "weight" in m_name:
                 layer_to_name_dict[m_name] = m_name.replace(".weight", "")+"_0"
@@ -103,16 +102,28 @@ def gen_mapping_layer_name(model):
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_1"
 
-    print("label_to_name_dict:{0}".format(layer_to_name_dict)) 
+    # print("label_to_name_dict:{0}".format(layer_to_name_dict)) 
+    # For BN running_avg, since it's not in parameters, we need to deal with it here.
+    for k in layer_to_name_dict.keys():
+        if ("bn" in k or "downsample.1" in k) and ("weight" in k):
+            key_name = k.replace(k.split('.')[-1], "running_mean")
+            avg_name = layer_to_name_dict[k][:-1]+"2"
+            layer_to_name_dict[key_name] = avg_name
 
     return layer_to_name_dict
 
-def load_npy_to_layer(model, layer_to_name_dict, npy_folder):
-    for (m_name, m) in model.named_parameters():
-        npy_path = os.path.join(npy_folder, layer_to_name_dict[m_name]+".npy")
-        np_data = np.load(open(npy_path, 'r'))
-        m.data = torch.from_numpy(np_data)
-        print("{0} loaded successfully".format(m_name))
+def load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path):
+    pretrained_dict = model.state_dict()
+    for (m_name, m_data) in model.state_dict().items():
+        if m_name in layer_to_name_dict:
+            npy_path = os.path.join(npy_folder, layer_to_name_dict[m_name]+".npy")
+            np_data = np.load(open(npy_path, 'r'))
+            pretrained_dict[m_name] = torch.from_numpy(np_data)
+            print("{0} loaded successfully".format(m_name))
+
+    # Store model into pth file.
+    model.load_state_dict(pretrained_dict)
+    torch.save({'state_dict': model.state_dict()}, loaded_model_path)
 
 def init_bilinear(arr):
     weight = np.zeros(np.prod(arr.size()), dtype='float32')
@@ -132,7 +143,7 @@ def set_require_grad_to_false(m):
 
 class ScaleLayer(nn.Module):
 
-    def __init__(self, size, init_value=1):
+    def __init__(self, size, init_value=0.001):
         """
         Adopted from https://discuss.pytorch.org/t/is-scale-layer-available-in-pytorch/7954/6
         """
@@ -312,7 +323,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, for_vis=False):
         x = self.conv1(x)
         x = self.bn_conv1(x)
         x = self.scale_conv1(x)
@@ -349,7 +360,10 @@ class ResNet(nn.Module):
         concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 80 X 352 X 352
         fused_feats = self.ce_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
         
-        return cropped_score_feats5, fused_feats
+        if for_vis:
+            return score_feats1, cropped_score_feats2, cropped_score_feats3, cropped_score_feats5, fused_feats
+        else:
+            return cropped_score_feats5, fused_feats
 
 def CASENet_resnet101(pretrained=False, num_classes=20):
     """Constructs a modified ResNet-101 model for CASENet.
@@ -364,9 +378,12 @@ def CASENet_resnet101(pretrained=False, num_classes=20):
 if __name__ == "__main__":
     model = CASENet_resnet101(pretrained=False, num_classes=20)
    
-    npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
+    # npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
+    # loaded_model_path = "../official_models/trained_CASENet.pth.tar"
+    npy_folder = "/ais/gobi4/fashion/edge_detection/models/init_model.npz"
+    loaded_model_path = "../official_models/Init_CASENet.pth.tar"
     layer_to_name_dict = gen_mapping_layer_name(model)
-    load_npy_to_layer(model, layer_to_name_dict, npy_folder)
+    load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path)
     
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
