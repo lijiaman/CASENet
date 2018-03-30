@@ -11,3 +11,4 @@
 *.hdf5
 *.npz
 .nfs*
+*.txt
