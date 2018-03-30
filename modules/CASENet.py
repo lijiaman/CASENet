@@ -9,6 +9,101 @@ sys.path.append("../")
 import numpy as np
 import utils.utils as utils
 
+def gen_mapping_layer_name(model):
+    layer_to_name_dict = {} # key is module name in currrent model, value is the filename of numpy
+    for (m_name, m) in model.named_parameters():
+        print("m_name:{0}".format(m_name))
+        if not "res" in m_name: # This case, name is totally the same.
+            if "weight" in m_name or ".scale" in m_name:
+                layer_to_name_dict[m_name] = m_name.replace(".weight", "")+"_0"
+            if "bias" in m_name:
+                layer_to_name_dict[m_name] = m_name.replace(".bias", "")+"_1"
+            # TO DO : For BN, running avg or var? bn_conv1_2 is for which?
+        else:
+            if "res2" in m_name or "res5" in m_name:
+                anno_dict = {'0':"a", '1':"b", '2':"c"}
+            elif "res3" in m_name or "res4" in m_name:
+                anno_dict = {}
+                for k in xrange(23):
+                    if k == 0:
+                        anno_dict[str(k)] = "a"
+                    else:
+                        anno_dict[str(k)] = "b"+str(k)
+                         
+            label_idx = m_name.split('.')[1] # Represnet 0 in res2.0
+            label_anno = anno_dict[label_idx] # Represent "a", "b", "c" or "b1", etc 
+            
+            if "downsample.0" in m_name: # For the convolution in another branch
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch1_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch1_0"
+
+            if "downsample.1" in m_name: # For the BN layer in another branch
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_1"
+                # TO DO : For BN, running avg or var? bn2a_branch1_2 is for which?
+
+            if "scale_downsample" in m_name: # For the scale layer in another branch
+                if "scale" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_1"
+
+            if "conv1" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2a_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2a_1"
+            if "conv2" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2b_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2b_1"
+            if "conv3" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2c_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch2c_1"
+
+            # For BN layer
+            if "bn1" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2a_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2a_1"
+            if "bn2" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2b_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2b_1"
+            if "bn3" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2c_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2c_1"
+            
+            # For Scale layer
+            if "scale_conv1" in m_name:
+                if "scale" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2a_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2a_1"
+            if "scale_conv2" in m_name:
+                if "scale" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2b_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2b_1"
+            if "scale_conv3" in m_name:
+                if "scale" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_1"
+
+    print("label_to_name_dict:{0}".format(layer_to_name_dict)) 
+
 def init_bilinear(arr):
     weight = np.zeros(np.prod(arr.size()), dtype='float32')
     shape = arr.size()
@@ -27,15 +122,18 @@ def set_require_grad_to_false(m):
 
 class ScaleLayer(nn.Module):
 
-    def __init__(self, init_value=1e-3):
+    def __init__(self, size, init_value=1):
         """
         Adopted from https://discuss.pytorch.org/t/is-scale-layer-available-in-pytorch/7954/6
         """
         super(ScaleLayer, self).__init__()
-        self.scale = nn.Parameter(torch.FloatTensor([init_value]))
+        self.scale = nn.Parameter(torch.FloatTensor([init_value]*size))
+        self.bias = nn.Parameter(torch.FloatTensor([init_value]*size))
 
     def forward(self, input_data):
-        return input_data * self.scale
+        print("input_data.size:{0}".format(input_data.size()))
+        print("self.scale size:{0}".format(self.scale.size()))
+        return input_data * self.scale.unsqueeze(0).unsqueeze(2).unsqueeze(3) + self.bias.unsqueeze(0).unsqueeze(2).unsqueeze(3)
 
 class CropLayer(nn.Module):
 
@@ -83,7 +181,7 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.scale_conv1 = ScaleLayer()
+        self.scale_conv1 = ScaleLayer(size=planes)
 
         if special_case:
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
@@ -92,15 +190,15 @@ class Bottleneck(nn.Module):
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
                                dilation=2, padding=2, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.scale_conv2 = ScaleLayer()
+        self.scale_conv2 = ScaleLayer(size=planes)
 
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
-        self.scale_conv3 = ScaleLayer()
+        self.scale_conv3 = ScaleLayer(size=planes*4)
 
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
-        self.scale_downsample = ScaleLayer()
+        self.scale_downsample = ScaleLayer(size=planes*4)
         self.stride = stride
 
     def forward(self, x):
@@ -137,37 +235,31 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=1, padding=3,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.scale_conv1 = ScaleLayer()
+        self.bn_conv1 = nn.BatchNorm2d(64)
+        self.scale_conv1 = ScaleLayer(size=64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)
 
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=1, special_case=True) # Notice official resnet is 2, but CASENet here is 1.
+        self.res2 = self._make_layer(block, 64, layers[0])
+        self.res3 = self._make_layer(block, 128, layers[1], stride=2)
+        self.res4 = self._make_layer(block, 256, layers[2], stride=2)
+        self.res5 = self._make_layer(block, 512, layers[3], stride=1, special_case=True) # Notice official resnet is 2, but CASENet here is 1.
 
         # Added by CASENet to get feature map from each branch in different scales.
-        self.score_side1 = nn.Conv2d(64, 1, kernel_size=1, bias=True)
-        self.score_side2 = nn.Sequential(
-            nn.Conv2d(256, 1, kernel_size=1, bias=True),
-            nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, bias=False)
-        ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
-        set_require_grad_to_false(self.score_side2[1]) 
+        self.score_edge_side1 = nn.Conv2d(64, 1, kernel_size=1, bias=True)
+        self.score_edge_side2 = nn.Conv2d(256, 1, kernel_size=1, bias=True)
+        self.upsample_edge_side2 = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, bias=False)
+        set_require_grad_to_false(self.upsample_edge_side2)
         
-        self.score_side3 = nn.Sequential(
-            nn.Conv2d(512, 1, kernel_size=1, bias=True),
-            nn.ConvTranspose2d(1, 1, kernel_size=8, stride=4, bias=False)
-        ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
-        set_require_grad_to_false(self.score_side3[1]) 
+        self.score_edge_side3 = nn.Conv2d(512, 1, kernel_size=1, bias=True)
+        self.upsample_edge_side3 = nn.ConvTranspose2d(1, 1, kernel_size=8, stride=4, bias=False)
+        set_require_grad_to_false(self.upsample_edge_side3) 
         
-        self.score_side5 = nn.Sequential(
-            nn.Conv2d(2048, num_classes, kernel_size=1, bias=True),
-            nn.ConvTranspose2d(num_classes, num_classes, kernel_size=16, stride=8, groups=num_classes, bias=False)
-        ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
-        set_require_grad_to_false(self.score_side5[1]) 
+        self.score_cls_side5 = nn.Conv2d(2048, num_classes, kernel_size=1, bias=True)
+        self.upsample_cls_side5 = nn.ConvTranspose2d(num_classes, num_classes, kernel_size=16, stride=8, groups=num_classes, bias=False)
+        set_require_grad_to_false(self.upsample_cls_side5) 
 
-        self.score_fusion = nn.Conv2d(num_classes*4, num_classes, kernel_size=1, groups=num_classes, bias=True)
+        self.ce_fusion = nn.Conv2d(num_classes*4, num_classes, kernel_size=1, groups=num_classes, bias=True)
 
         # Define crop, concat layer
         self.crop_layer = CropLayer()
@@ -183,13 +275,13 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
 
         # Initialize ConvTranspose2D with bilinear.
-        self.score_side2[1].weight.data = init_bilinear(self.score_side2[1].weight)
-        self.score_side3[1].weight.data = init_bilinear(self.score_side3[1].weight)
-        self.score_side5[1].weight.data = init_bilinear(self.score_side5[1].weight)
+        self.upsample_edge_side2.weight.data = init_bilinear(self.upsample_edge_side2.weight)
+        self.upsample_edge_side3.weight.data = init_bilinear(self.upsample_edge_side3.weight)
+        self.upsample_cls_side5.weight.data = init_bilinear(self.upsample_cls_side5.weight)
 
         # Initialize final conv fusion layer with constant=0.25
-        self.score_fusion.weight.data.fill_(0.25)
-        self.score_fusion.bias.data.zero_()
+        self.ce_fusion.weight.data.fill_(0.25)
+        self.ce_fusion.bias.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1, special_case=False):
         """
@@ -213,25 +305,28 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn1(x)
+        x = self.bn_conv1(x)
         x = self.scale_conv1(x)
         x = self.relu(x) # BS X 64 X 352 X 352
-        score_feats1 = self.score_side1(x) # BS X 1 X 352 X 352
+        score_feats1 = self.score_edge_side1(x) # BS X 1 X 352 X 352
         
         x = self.maxpool(x) # BS X 64 X 175 X 175
         
-        x = self.layer1(x) # BS X 256 X 175 X 175
-        score_feats2 = self.score_side2(x) # BS X 1 X 352 X 352
-        cropped_score_feats2 = score_feats2 # Here don't need to crop. (In official caffe, there's crop)
+        x = self.res2(x) # BS X 256 X 175 X 175
+        score_feats2 = self.score_edge_side2(x) # BS X 1 X 352 X 352
+        upsampled_score_feats2 = self.upsample_edge_side2(score_feats2)
+        cropped_score_feats2 = upsampled_score_feats2 # Here don't need to crop. (In official caffe, there's crop)
 
-        x = self.layer2(x) # BS X 512 X 88 X 88
-        score_feats3 = self.score_side3(x) # BS X 1 X 356 X 356
-        cropped_score_feats3 = self.crop_layer(score_feats3, offset=2) # BS X 1 X 352 X 352
+        x = self.res3(x) # BS X 512 X 88 X 88
+        score_feats3 = self.score_edge_side3(x) # BS X 1 X 356 X 356
+        upsampled_score_feats3 = self.upsample_edge_side3(score_feats3)
+        cropped_score_feats3 = self.crop_layer(upsampled_score_feats3, offset=2) # BS X 1 X 352 X 352
         
-        x = self.layer3(x)
-        x = self.layer4(x)
-        score_feats5 = self.score_side5(x)
-        cropped_score_feats5 = self.crop_layer(score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
+        x = self.res4(x)
+        x = self.res5(x)
+        score_feats5 = self.score_cls_side5(x)
+        upsampled_score_feats5 = self.upsample_cls_side5(score_feats5)
+        cropped_score_feats5 = self.crop_layer(upsampled_score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
         sliced_list = self.slice_layer(cropped_score_feats5) # Each element is BS X 1 X 352 X 352
         
         # Add low-level feats to sliced_list
@@ -243,44 +338,9 @@ class ResNet(nn.Module):
             final_sliced_list.append(cropped_score_feats3)
         
         concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 80 X 352 X 352
-        fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
+        fused_feats = self.ce_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
         
         return cropped_score_feats5, fused_feats
-
-    def forward_for_vis(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x) # BS X 64 X 352 X 352
-        score_feats1 = self.score_side1(x)
-        
-        x = self.maxpool(x)
-
-        x = self.layer1(x)
-        score_feats2 = self.score_side2(x)
-        cropped_score_feats2 = score_feats2
-
-        x = self.layer2(x)
-        score_feats3 = self.score_side3(x)
-        cropped_score_feats3 = self.crop_layer(score_feats3, offset=2)
-        
-        x = self.layer3(x)
-        x = self.layer4(x)
-        score_feats5 = self.score_side5(x)
-        cropped_score_feats5 = self.crop_layer(score_feats5, offset=4) # BS X 20 X 352 X 352. The output of it will be used to get a loss for this branch.
-        sliced_list = self.slice_layer(cropped_score_feats5) # Each element is BS X 1 X 352 X 352
-        
-        # Add low-level feats to sliced_list
-        final_sliced_list = []
-        for i in xrange(len(sliced_list)):
-            final_sliced_list.append(sliced_list[i])
-            final_sliced_list.append(score_feats1)
-            final_sliced_list.append(cropped_score_feats2)
-            final_sliced_list.append(cropped_score_feats3)
-
-        concat_feats = self.concat_layer(final_sliced_list, dim=1) # BS X 80 X 352 X 352
-        fused_feats = self.score_fusion(concat_feats) # BS X 20 X 352 X 352. The output of this will gen loss for this branch. So, totaly 2 loss. (same loss type)
-        
-        return score_feats1, cropped_score_feats2, cropped_score_feats3, cropped_score_feats5, fused_feats
 
 def CASENet_resnet101(pretrained=False, num_classes=20):
     """Constructs a modified ResNet-101 model for CASENet.
@@ -293,15 +353,21 @@ def CASENet_resnet101(pretrained=False, num_classes=20):
     return model
 
 if __name__ == "__main__":
-    model = CASENet_resnet101(pretrained=True, num_classes=20)
+    model = CASENet_resnet101(pretrained=False, num_classes=20)
+   
+    npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
+    gen_mapping_layer_name(model)
+
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
     output1, output2  = model(input_var) 
-    print("output1.size:{0}".format(output1.size()))
-    print("output2.size:{0}".format(output2.size()))
-    feats1, feats2, feats3, feats5, fused_feats = model.forward_for_vis(input_var)
-    print("feats1.size:{0}".format(feats1.size()))
-    print("feats2.size:{0}".format(feats2.size()))
-    print("feats3.size:{0}".format(feats3.size()))
-    print("feats5.size:{0}".format(feats5.size()))
-    print("fused feats.size:{0}".format(fused_feats.size()))
+   # print("output1.size:{0}".format(output1.size()))
+   # print("output2.size:{0}".format(output2.size()))
+   # feats1, feats2, feats3, feats5, fused_feats = model.forward_for_vis(input_var)
+   # print("feats1.size:{0}".format(feats1.size()))
+   # print("feats2.size:{0}".format(feats2.size()))
+   # print("feats3.size:{0}".format(feats3.size()))
+   # print("feats5.size:{0}".format(feats5.size()))
+   # print("fused feats.size:{0}".format(fused_feats.size()))
+
+    # Test loading weight from numpy files
