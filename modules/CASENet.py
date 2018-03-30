@@ -6,7 +6,24 @@ import torchvision.models as models
 import sys
 sys.path.append("../")
 
+import numpy as np
 import utils.utils as utils
+
+def init_bilinear(arr):
+    weight = np.zeros(np.prod(arr.size()), dtype='float32')
+    shape = arr.size()
+    f = np.ceil(shape[3] / 2.)
+    c = (2 * f - 1 - f % 2) / (2. * f)
+    for i in range(np.prod(shape)):
+        x = i % shape[3]
+        y = (i / shape[3]) % shape[2]
+        weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+    
+    return torch.from_numpy(weight.reshape(shape))
+
+def set_require_grad_to_false(m):
+    for param in m.parameters():
+        param.requires_grad = False
 
 class ScaleLayer(nn.Module):
 
@@ -136,16 +153,19 @@ class ResNet(nn.Module):
             nn.Conv2d(256, 1, kernel_size=1, bias=True),
             nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
+        set_require_grad_to_false(self.score_side2[1]) 
         
         self.score_side3 = nn.Sequential(
             nn.Conv2d(512, 1, kernel_size=1, bias=True),
             nn.ConvTranspose2d(1, 1, kernel_size=8, stride=4, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
+        set_require_grad_to_false(self.score_side3[1]) 
         
         self.score_side5 = nn.Sequential(
             nn.Conv2d(2048, num_classes, kernel_size=1, bias=True),
             nn.ConvTranspose2d(num_classes, num_classes, kernel_size=16, stride=8, groups=num_classes, bias=False)
         ) # PyTorch currently does not have crop layer, so we use index to crop in forward.
+        set_require_grad_to_false(self.score_side5[1]) 
 
         self.score_fusion = nn.Conv2d(num_classes*4, num_classes, kernel_size=1, groups=num_classes, bias=True)
 
@@ -161,6 +181,15 @@ class ResNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+
+        # Initialize ConvTranspose2D with bilinear.
+        self.score_side2[1].weight.data = init_bilinear(self.score_side2[1].weight)
+        self.score_side3[1].weight.data = init_bilinear(self.score_side3[1].weight)
+        self.score_side5[1].weight.data = init_bilinear(self.score_side5[1].weight)
+
+        # Initialize final conv fusion layer with constant=0.25
+        self.score_fusion.weight.data.fill_(0.25)
+        self.score_fusion.bias.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1, special_case=False):
         """

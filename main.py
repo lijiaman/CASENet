@@ -110,12 +110,13 @@ def get_model_policy(model):
                 if len(ps) == 2:
                     score_feats_conv_bias.append(ps[1])
             elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
+            # elif (not m[0].split('.')[-1].startswith('score_conv')) and (isinstance(m[1], torch.nn.Conv2d) or isinstance(m[1], ScaleLayer))
                 ps = list(m[1].parameters())
                 other_pts.extend(ps)
     return [
             {'params': score_feats_conv_weight, 'lr_mult': 10, 'name': 'score_conv_weight'},
             {'params': score_feats_conv_bias, 'lr_mult': 20, 'name': 'score_conv_bias'},
-            {'params': other_pts, 'lr_mult': 1, 'name': 'other'},
+            {'params': filter(lambda p: p.requires_grad, other_pts), 'lr_mult': 1, 'name': 'other'},
     ]
 
 if __name__ == '__main__':

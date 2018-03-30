@@ -26,7 +26,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
     total_losses = AverageMeter()
     
     # switch to train mode
-    model.train()
+    model.eval()
 
     end = time.time()
     for i, (img, target) in enumerate(train_loader):

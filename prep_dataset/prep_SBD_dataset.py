@@ -71,7 +71,7 @@ def get_dataloader(args):
                         transforms.ToTensor(),
                         ]))
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False,
+        val_dataset, batch_size=args.batch_size/2, shuffle=False,
         num_workers=args.workers, pin_memory=True)
     
     return train_loader, val_loader
