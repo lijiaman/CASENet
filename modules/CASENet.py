@@ -8,17 +8,19 @@ sys.path.append("../")
 
 import numpy as np
 import utils.utils as utils
+import os
 
 def gen_mapping_layer_name(model):
     layer_to_name_dict = {} # key is module name in currrent model, value is the filename of numpy
     for (m_name, m) in model.named_parameters():
         print("m_name:{0}".format(m_name))
         if not "res" in m_name: # This case, name is totally the same.
-            if "weight" in m_name or ".scale" in m_name:
+            if "weight" in m_name:
                 layer_to_name_dict[m_name] = m_name.replace(".weight", "")+"_0"
+            if ".scale" in m_name:
+                layer_to_name_dict[m_name] = m_name.replace(".scale", "")+"_0"
             if "bias" in m_name:
                 layer_to_name_dict[m_name] = m_name.replace(".bias", "")+"_1"
-            # TO DO : For BN, running avg or var? bn_conv1_2 is for which?
         else:
             if "res2" in m_name or "res5" in m_name:
                 anno_dict = {'0':"a", '1':"b", '2':"c"}
@@ -37,17 +39,16 @@ def gen_mapping_layer_name(model):
                 if "weight" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch1_0"
                 if "bias" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch1_0"
+                    layer_to_name_dict[m_name] = m_name.split('.')[0]+label_anno+"_branch1_1"
 
             if "downsample.1" in m_name: # For the BN layer in another branch
                 if "weight" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_1"
-                # TO DO : For BN, running avg or var? bn2a_branch1_2 is for which?
 
             if "scale_downsample" in m_name: # For the scale layer in another branch
-                if "scale" in m_name:
+                if "scale" in m_name.split('.')[-1]:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_1"
@@ -104,6 +105,15 @@ def gen_mapping_layer_name(model):
 
     print("label_to_name_dict:{0}".format(layer_to_name_dict)) 
 
+    return layer_to_name_dict
+
+def load_npy_to_layer(model, layer_to_name_dict, npy_folder):
+    for (m_name, m) in model.named_parameters():
+        npy_path = os.path.join(npy_folder, layer_to_name_dict[m_name]+".npy")
+        np_data = np.load(open(npy_path, 'r'))
+        m.data = torch.from_numpy(np_data)
+        print("{0} loaded successfully".format(m_name))
+
 def init_bilinear(arr):
     weight = np.zeros(np.prod(arr.size()), dtype='float32')
     shape = arr.size()
@@ -131,8 +141,6 @@ class ScaleLayer(nn.Module):
         self.bias = nn.Parameter(torch.FloatTensor([init_value]*size))
 
     def forward(self, input_data):
-        print("input_data.size:{0}".format(input_data.size()))
-        print("self.scale size:{0}".format(self.scale.size()))
         return input_data * self.scale.unsqueeze(0).unsqueeze(2).unsqueeze(3) + self.bias.unsqueeze(0).unsqueeze(2).unsqueeze(3)
 
 class CropLayer(nn.Module):
@@ -198,7 +206,8 @@ class Bottleneck(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
-        self.scale_downsample = ScaleLayer(size=planes*4)
+        if self.downsample is not None:
+            self.scale_downsample = ScaleLayer(size=planes*4)
         self.stride = stride
 
     def forward(self, x):
@@ -356,8 +365,9 @@ if __name__ == "__main__":
     model = CASENet_resnet101(pretrained=False, num_classes=20)
    
     npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
-    gen_mapping_layer_name(model)
-
+    layer_to_name_dict = gen_mapping_layer_name(model)
+    load_npy_to_layer(model, layer_to_name_dict, npy_folder)
+    
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
     output1, output2  = model(input_var) 
