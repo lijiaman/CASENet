@@ -8,7 +8,6 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.nn.functional as F
-
 from torch.autograd import Variable
 
 import sys
@@ -18,14 +17,14 @@ sys.path.append("../")
 import utils.utils as utils
 from utils.utils import AverageMeter
 
-
 def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global_step):
     batch_time = AverageMeter()
     data_time = AverageMeter()
-
+    feats5_losses = AverageMeter()
+    fusion_losses = AverageMeter()
     total_losses = AverageMeter()
-    
-    # switch to train mode
+
+    # switch to eval mode to make BN unchanged.
     model.eval()
 
     end = time.time()
@@ -45,10 +44,15 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
         fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
         loss = feats5_loss + fused_feats_loss
              
+        feats5_losses.update(feats5_loss.data[0], bs)
+        fusion_losses.update(fused_feats_loss.data[0], bs)
         total_losses.update(loss.data[0], bs)
 
-        trn_cls_loss = fused_feats_loss.clone().cpu().data.numpy()[0]
-        viz.line(win=win, name='train', update='append', X=np.array([global_step]), Y=np.array([trn_cls_loss]))
+        # Only plot the fused feats loss.
+        trn_feats5_loss = feats5_loss.clone().cpu().data.numpy()[0]
+        trn_fusion_loss = fused_feats_loss.clone().cpu().data.numpy()[0]
+        viz.line(win=win, name='train_feats5', update='append', X=np.array([global_step]), Y=np.array([trn_feats5_loss]))
+        viz.line(win=win, name='train_fusion', update='append', X=np.array([global_step]), Y=np.array([trn_fusion_loss]))
 
         optimizer.zero_grad()
         loss.backward()
@@ -64,7 +68,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Total Loss {total_loss.val:.11f} ({total_loss.avg:.11f})\n'
-                  'lr {learning_rate:.9f}\t'
+                  'lr {learning_rate:.10f}\t'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses, 
                    learning_rate=curr_lr))
@@ -76,7 +80,8 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
 def validate(args, val_loader, model, epoch, win, viz, global_step):
     batch_time = AverageMeter()
     data_time = AverageMeter()
-
+    feats5_losses = AverageMeter()
+    fusion_losses = AverageMeter()
     total_losses = AverageMeter()
     
     # switch to train mode
@@ -99,7 +104,9 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
         fused_feats_loss = WeightedMultiLabelSigmoidLoss(fused_feats, target_var) 
         loss = feats5_loss + fused_feats_loss
              
-        total_losses.update(fused_feats_loss.data[0], bs)
+        feats5_losses.update(feats5_loss.data[0], bs)
+        fusion_losses.update(fused_feats_loss.data[0], bs)
+        total_losses.update(loss.data[0], bs)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -114,8 +121,10 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
                   .format(epoch, i, len(val_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses))
         
-    viz.line(win=win, name='val', update='append', X=np.array([global_step]), Y=np.array([total_losses.avg]))
-    return total_losses.avg 
+    viz.line(win=win, name='val_feats5', update='append', X=np.array([global_step]), Y=np.array([feats5_losses.avg]))
+    viz.line(win=win, name='val_fusion', update='append', X=np.array([global_step]), Y=np.array([fusion_losses.avg]))
+    
+    return fusion_losses.avg 
 
 def WeightedMultiLabelSigmoidLoss(model_output, target):
     """

@@ -37,7 +37,6 @@ class SBDData(data.Dataset):
             self.idx2name_dict[cnt]['label'] = label_name
             self.ids.append(cnt)
             cnt += 1
-            break; # For temporal testing fit 1 sample
 
     def __getitem__(self, index):
         index = 0

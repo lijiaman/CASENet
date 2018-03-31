@@ -11,6 +11,14 @@ import utils.utils as utils
 import os
 
 def gen_mapping_layer_name(model):
+    """
+    Generate mapping for name in pytorch with name in Caffe to load numpy file we transformed.
+    Notice that BatchNorm in pytorch is very different from Caffe. 
+    bn.weight --> scale_layer.weight (Caffe)
+    bn.bias --> scale_layer.bias (Caffe)
+    bn.running_mean --> bn_layer, blob[0]/blob[2]
+    bn.running_var --> bn_layer, blob[1]/blob[2]
+    """
     layer_to_name_dict = {} # key is module name in currrent model, value is the filename of numpy
     for (m_name, m) in model.named_parameters():
         if not "res" in m_name: # This case, name is totally the same.
@@ -83,7 +91,7 @@ def gen_mapping_layer_name(model):
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_1"
             
-    # For BN running_avg, since it's not in parameters, we need to deal with it here.
+    # For BN running_mean/var, since it's not in parameters, we need to deal with it here.
     for k in layer_to_name_dict.keys():
         if ("bn" in k or "downsample.1" in k) and ("weight" in k):
             avg_key_name = k.replace(k.split('.')[-1], "running_mean")
@@ -139,9 +147,11 @@ def set_require_grad_to_false(m):
     for param in m.parameters():
         param.requires_grad = False
 
-# This laye won't be used. Since BN(pytorch) = BN + Scale (Caffe)
 class ScaleLayer(nn.Module):
-
+    """
+    This laye is not used. Since BN(pytorch) = BN + Scale (Caffe).
+    Before we used BN+Scale in pytorch, this is a bug. :/
+    """
     def __init__(self, size, init_value=0.001):
         """
         Adopted from https://discuss.pytorch.org/t/is-scale-layer-available-in-pytorch/7954/6
@@ -154,7 +164,7 @@ class ScaleLayer(nn.Module):
         return input_data * self.scale.unsqueeze(0).unsqueeze(2).unsqueeze(3) + self.bias.unsqueeze(0).unsqueeze(2).unsqueeze(3)
 
 class CropLayer(nn.Module):
-
+    
     def __init__(self):
         super(CropLayer, self).__init__()
 
@@ -207,6 +217,7 @@ class Bottleneck(nn.Module):
         else:
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
                                dilation=2, padding=2, bias=False)
+   
         self.bn2 = nn.BatchNorm2d(planes)
         set_require_grad_to_false(self.bn2)
 
@@ -250,6 +261,7 @@ class ResNet(nn.Module):
                                bias=False)
         self.bn_conv1 = nn.BatchNorm2d(64)
         set_require_grad_to_false(self.bn_conv1)
+   
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)
 
@@ -373,21 +385,23 @@ if __name__ == "__main__":
    
     npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
     loaded_model_path = "../official_models/trained_CASENet.pth.tar"
-    # npy_folder = "/ais/gobi4/fashion/edge_detection/models/init_model.npz"
-    # loaded_model_path = "../official_models/Init_CASENet.pth.tar"
+    layer_to_name_dict = gen_mapping_layer_name(model)
+    load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path)
+    
+    npy_folder = "/ais/gobi4/fashion/edge_detection/models/init_model.npz"
+    loaded_model_path = "../official_models/Init_CASENet.pth.tar"
     layer_to_name_dict = gen_mapping_layer_name(model)
     load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path)
     
     input_data = torch.rand(2, 3, 352, 352)
     input_var = Variable(input_data)
     output1, output2  = model(input_var) 
-   # print("output1.size:{0}".format(output1.size()))
-   # print("output2.size:{0}".format(output2.size()))
-   # feats1, feats2, feats3, feats5, fused_feats = model.forward_for_vis(input_var)
-   # print("feats1.size:{0}".format(feats1.size()))
-   # print("feats2.size:{0}".format(feats2.size()))
-   # print("feats3.size:{0}".format(feats3.size()))
-   # print("feats5.size:{0}".format(feats5.size()))
-   # print("fused feats.size:{0}".format(fused_feats.size()))
+    print("output1.size:{0}".format(output1.size()))
+    print("output2.size:{0}".format(output2.size()))
+    feats1, feats2, feats3, feats5, fused_feats = model(input_var, for_vis=True)
+    print("feats1.size:{0}".format(feats1.size()))
+    print("feats2.size:{0}".format(feats2.size()))
+    print("feats3.size:{0}".format(feats3.size()))
+    print("feats5.size:{0}".format(feats5.size()))
+    print("fused feats.size:{0}".format(fused_feats.size()))
 
-    # Test loading weight from numpy files

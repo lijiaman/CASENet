@@ -41,7 +41,6 @@ class SBDData(data.Dataset):
             self.idx2name_dict[cnt]['label'] = label_name
             self.ids.append(cnt)
             cnt += 1
-            # break; # For temporal testing fit 1 sample
 
     def __getitem__(self, index):
         img_name = self.idx2name_dict[index]['img']
@@ -58,7 +57,7 @@ class SBDData(data.Dataset):
         for k in xrange(np_data.shape[2]):
             if np_data[:,:,k].sum() > 0:
                 label_tensor = self.label_transform(torch.from_numpy(np_data[:, :, k]).unsqueeze(0).float())
-            else: # ALL zeros, don't need transform
+            else: # ALL zeros, don't need transform, maybe a bit faster?..
                 label_tensor = torch.zeros(1, self.input_size, self.input_size).float()
             label_data.append(label_tensor.squeeze(0).long())
         label_data = torch.stack(label_data).transpose(0,1).transpose(1,2) # N X H X W -> H X W X N

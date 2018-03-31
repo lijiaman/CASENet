@@ -9,7 +9,6 @@ import torch.optim
 import torch.utils.data
 import torchvision.models as models
 import torch.nn.functional as F
-
 from torch.autograd import Variable
 
 # Local imports
@@ -44,20 +43,20 @@ def main():
     title = 'train|val loss '
     init = np.NaN
     win = viz.line(
-        X=np.column_stack((np.array([init]), np.array([init]))),
-        Y=np.column_stack((np.array([init]), np.array([init]))),
-        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train', 'val']},
+        X=np.column_stack((np.array([init]), np.array([init]), np.array([init]), np.array([init]))),
+        Y=np.column_stack((np.array([init]), np.array([init]), np.array([init]), np.array([init]))),
+        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train_feats5', 'train_fusion', 'val_feats5', 'val_fusion']},
     )
 
     train_loader, val_loader = prep_SBD_dataset.get_dataloader(args)
-    model = CASENet_resnet101(pretrained=True, num_classes=args.cls_num)
+    model = CASENet_resnet101(pretrained=False, num_classes=args.cls_num)
 
     if args.multigpu:
         model = torch.nn.DataParallel(model.cuda())
     else:
         model = model.cuda()
 
-    policies = get_model_policy(model)
+    policies = get_model_policy(model) # Set the lr_mult=10 of new layer
     optimizer = torch.optim.SGD(policies, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     cudnn.benchmark = True
@@ -104,16 +103,16 @@ def get_model_policy(model):
     other_pts = []
     for m in model.named_modules():
         if m[0] != '' and m[0] != 'module':
-            if 'score' in m[0] and isinstance(m[1], torch.nn.Conv2d):
+            if ('score' in m[0] or 'fusion' in m[0]) and isinstance(m[1], torch.nn.Conv2d):
                 ps = list(m[1].parameters())
                 score_feats_conv_weight.append(ps[0])
                 if len(ps) == 2:
                     score_feats_conv_bias.append(ps[1])
-            else:
-            # elif not ('score' in m[0] and isinstance(m[1], torch.nn.Sequential)):
-            # elif (not m[0].split('.')[-1].startswith('score_conv')) and (isinstance(m[1], torch.nn.Conv2d) or isinstance(m[1], ScaleLayer))
+                print("Totally new layer:{0}".format(m[0]))
+            else: # For all the other module that is not totally new layer.
                 ps = list(m[1].parameters())
                 other_pts.extend(ps)
+
     return [
             {'params': score_feats_conv_weight, 'lr_mult': 10, 'name': 'score_conv_weight'},
             {'params': score_feats_conv_bias, 'lr_mult': 20, 'name': 'score_conv_bias'},
