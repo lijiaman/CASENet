@@ -103,6 +103,7 @@ if __name__ == "__main__":
     else:
         image_file = os.path.join(args.image_dir, args.image_file)
         if os.path.exists(image_file):
+            ori_test_list = [args.image_file]
             test_lst = [image_file]
         else:
             raise IOError('nothing to be tested!')
@@ -147,14 +148,14 @@ if __name__ == "__main__":
         score_feats1, score_feats2, score_feats3, score_feats5, score_fuse_feats = model(processed_img, for_vis=True)
         
         # Load numpy from hdf5 for gt.
-        np_data = self.h5_f['data/'+ori_test_list[idx_img].replace('/', '_').replace('png', 'npy')]
+        np_data = h5_f['data/'+ori_test_list[idx_img].replace('image', 'label').replace('/', '_').replace('png', 'npy')]
         label_data = []
         for k in xrange(np_data.shape[2]):
             if np_data[:,:,k].sum() > 0:
-                label_tensor = self.label_transform(torch.from_numpy(np_data[:, :, k]).unsqueeze(0).float())
+                label_tensor = label_transform(torch.from_numpy(np_data[:, :, k]).unsqueeze(0).float())
             else: # ALL zeros, don't need transform, maybe a bit faster?..
-                label_tensor = torch.zeros(1, self.input_size, self.input_size).float()
-                label_data.append(label_tensor.squeeze(0).long())
+                label_tensor = torch.zeros(1, input_size, input_size).float()
+            label_data.append(label_tensor.squeeze(0).long())
         label_data = torch.stack(label_data).transpose(0,1).transpose(1,2) # N X H X W -> H X W X N
     
         img_base_name_noext = os.path.splitext(os.path.basename(test_lst[idx_img]))[0]
@@ -169,8 +170,10 @@ if __name__ == "__main__":
     
             side = normalized_feature_map(feature.data[0][0, :, :].cpu().numpy())
             im = (side*255).astype(np.uint8)
+            if not os.path.exists(os.path.join(args.output_dir, img_base_name_noext)):
+                os.makedirs(os.path.join(args.output_dir, img_base_name_noext))
             cv2.imwrite(
-                os.path.join(args.output_dir, img_base_name_noext+'_'+feature_str+'.png'),
+                os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_'+feature_str+'.png'),
                 im)
 
         # vis side class activation
@@ -178,8 +181,10 @@ if __name__ == "__main__":
         for idx_cls in xrange(num_cls):
             side_cls_i = side_cls[:, :, idx_cls]
             im = (side_cls_i * 255).astype(np.uint8)
+            if not os.path.exists(os.path.join(args.output_dir, img_base_name_noext)):
+                os.makedirs(os.path.join(args.output_dir, img_base_name_noext))
             cv2.imwrite(
-                os.path.join(args.output_dir, img_base_name_noext+'_'+'feats5'+'_'+cls_names[num_cls-idx_cls-1]+'.png'),
+                os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_'+'feats5'+'_'+cls_names[num_cls-idx_cls-1]+'.png'),
                 im)
     
         # vis class
@@ -200,10 +205,10 @@ if __name__ == "__main__":
             rgb[:,:,0] = (r/255.0)
             rgb[:,:,1] = (g/255.0)
             rgb[:,:,2] = (b/255.0)
-            if not os.path.exists(os.path.join(args.output_dir, img_base_name_noext))
+            if not os.path.exists(os.path.join(args.output_dir, img_base_name_noext)):
                 os.makedirs(os.path.join(args.output_dir, img_base_name_noext))
             plt.imsave(os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_fused_pred_'+cls_names[num_cls-idx_cls-1]+'.png'), rgb) 
-       
+        
         gt_data = label_data.numpy() 
         for idx_cls in xrange(num_cls):
             r = np.zeros((gt_data.shape[0], gt_data.shape[1]))
