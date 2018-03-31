@@ -21,12 +21,12 @@ def convert_num_to_bitfield(label_data, h, w, npz_name, root_folder, h5_file, cl
     h5_file.create_dataset('data/'+npz_name.replace('/', '_'), data=all_bit_tensor_list.numpy())
 
 if __name__ == "__main__":
-    f = open("/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt", 'r')
+    f = open("/ais/gobi4/fashion/edge_detection/data_aug/list_train_aug.txt", 'r')
     lines = f.readlines()
     root_folder = "/ais/gobi4/fashion/edge_detection/data_aug/"
     cnt = 0
 
-    h5_file = h5py.File("test_label_binary_np.h5", 'w')
+    h5_file = h5py.File("train_aug_label_binary_np.h5", 'w')
     for ori_line in lines:
         cnt += 1
         line = ori_line.split()
