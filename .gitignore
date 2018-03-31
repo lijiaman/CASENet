@@ -4,6 +4,7 @@
 *.pkl
 *.jpeg
 *.png
+*.bmp
 *.sh
 *.swp
 *.npy
