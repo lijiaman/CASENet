@@ -94,6 +94,7 @@ if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
 
 input_size = 352
+# normalize = transforms.Normalize(mean=[122.675, 116.669, 104.008], std=[1, 1, 1])
 normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])
 
 img_transform = transforms.Compose([

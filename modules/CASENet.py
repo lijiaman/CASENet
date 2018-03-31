@@ -14,12 +14,16 @@ def gen_mapping_layer_name(model):
     layer_to_name_dict = {} # key is module name in currrent model, value is the filename of numpy
     for (m_name, m) in model.named_parameters():
         if not "res" in m_name: # This case, name is totally the same.
-            if "weight" in m_name:
-                layer_to_name_dict[m_name] = m_name.replace(".weight", "")+"_0"
-            if ".scale" in m_name:
-                layer_to_name_dict[m_name] = m_name.replace(".scale", "")+"_0"
-            if "bias" in m_name:
-                layer_to_name_dict[m_name] = m_name.replace(".bias", "")+"_1"
+            if "bn" in m_name:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.replace("bn", "scale").replace(".weight", "")+"_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.replace("bn", "scale").replace(".bias", "")+"_1"
+            else:
+                if "weight" in m_name:
+                    layer_to_name_dict[m_name] = m_name.replace(".weight", "")+"_0"
+                if "bias" in m_name:
+                    layer_to_name_dict[m_name] = m_name.replace(".bias", "")+"_1"
         else:
             if "res2" in m_name or "res5" in m_name:
                 anno_dict = {'0':"a", '1':"b", '2':"c"}
@@ -42,12 +46,6 @@ def gen_mapping_layer_name(model):
 
             if "downsample.1" in m_name: # For the BN layer in another branch
                 if "weight" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_0"
-                if "bias" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch1_1"
-
-            if "scale_downsample" in m_name: # For the scale layer in another branch
-                if "scale" in m_name.split('.')[-1]:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch1_1"
@@ -71,60 +69,60 @@ def gen_mapping_layer_name(model):
             # For BN layer
             if "bn1" in m_name:
                 if "weight" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2a_0"
-                if "bias" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2a_1"
-            if "bn2" in m_name:
-                if "weight" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2b_0"
-                if "bias" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2b_1"
-            if "bn3" in m_name:
-                if "weight" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2c_0"
-                if "bias" in m_name:
-                    layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "bn")+label_anno+"_branch2c_1"
-            
-            # For Scale layer
-            if "scale_conv1" in m_name:
-                if "scale" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2a_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2a_1"
-            if "scale_conv2" in m_name:
-                if "scale" in m_name:
+            if "bn2" in m_name:
+                if "weight" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2b_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2b_1"
-            if "scale_conv3" in m_name:
-                if "scale" in m_name:
+            if "bn3" in m_name:
+                if "weight" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_0"
                 if "bias" in m_name:
                     layer_to_name_dict[m_name] = m_name.split('.')[0].replace("res", "scale")+label_anno+"_branch2c_1"
-
-    # print("label_to_name_dict:{0}".format(layer_to_name_dict)) 
+            
     # For BN running_avg, since it's not in parameters, we need to deal with it here.
     for k in layer_to_name_dict.keys():
         if ("bn" in k or "downsample.1" in k) and ("weight" in k):
-            key_name = k.replace(k.split('.')[-1], "running_mean")
-            avg_name = layer_to_name_dict[k][:-1]+"2"
-            layer_to_name_dict[key_name] = avg_name
-
+            avg_key_name = k.replace(k.split('.')[-1], "running_mean")
+            avg_name = [layer_to_name_dict[k][:-1].replace("scale", "bn")+"0", layer_to_name_dict[k][:-1].replace("scale", "bn")+"2"]
+            var_key_name = k.replace(k.split('.')[-1], "running_var")
+            var_name = [layer_to_name_dict[k][:-1].replace("scale", "bn")+"1", layer_to_name_dict[k][:-1].replace("scale", "bn")+"2"]
+            layer_to_name_dict[avg_key_name] = avg_name
+            layer_to_name_dict[var_key_name] = var_name
+    
+    print("Total number is:{0}".format(len(layer_to_name_dict.keys())))
+    for k in layer_to_name_dict.keys():
+        print("k:{0}, v:{1}".format(k, layer_to_name_dict[k]))
+    
     return layer_to_name_dict
 
 def load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path):
+    # Detect if all the npy name in the dict
     pretrained_dict = model.state_dict()
     for (m_name, m_data) in model.state_dict().items():
         if m_name in layer_to_name_dict:
-            npy_path = os.path.join(npy_folder, layer_to_name_dict[m_name]+".npy")
-            np_data = np.load(open(npy_path, 'r'))
-            pretrained_dict[m_name] = torch.from_numpy(np_data)
-            print("{0} loaded successfully".format(m_name))
+            if not ("running_mean" in m_name or "running_var" in m_name):
+                npy_path = os.path.join(npy_folder, layer_to_name_dict[m_name]+".npy")
+                np_data = np.load(open(npy_path, 'r'))
+                pretrained_dict[m_name] = torch.from_numpy(np_data)
+                print("{0} loaded successfully".format(m_name))
+            else:
+                # Need to calculate the avg, var
+                up_path = os.path.join(npy_folder, layer_to_name_dict[m_name][0]+".npy")
+                up_data = np.load(open(up_path, 'r'))
+                down_path = os.path.join(npy_folder, layer_to_name_dict[m_name][1]+".npy")
+                down_data = np.load(open(down_path, 'r'))
+                pretrained_dict[m_name] = torch.from_numpy(up_data/down_data)
+                print("{0} loaded successfully".format(m_name))
 
     # Store model into pth file.
     model.load_state_dict(pretrained_dict)
     torch.save({'state_dict': model.state_dict()}, loaded_model_path)
 
+# Bilinear initialization for ConvTranspose2D layer
 def init_bilinear(arr):
     weight = np.zeros(np.prod(arr.size()), dtype='float32')
     shape = arr.size()
@@ -141,6 +139,7 @@ def set_require_grad_to_false(m):
     for param in m.parameters():
         param.requires_grad = False
 
+# This laye won't be used. Since BN(pytorch) = BN + Scale (Caffe)
 class ScaleLayer(nn.Module):
 
     def __init__(self, size, init_value=0.001):
@@ -200,7 +199,7 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.scale_conv1 = ScaleLayer(size=planes)
+        set_require_grad_to_false(self.bn1)
 
         if special_case:
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
@@ -209,16 +208,14 @@ class Bottleneck(nn.Module):
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
                                dilation=2, padding=2, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.scale_conv2 = ScaleLayer(size=planes)
+        set_require_grad_to_false(self.bn2)
 
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
-        self.scale_conv3 = ScaleLayer(size=planes*4)
+        set_require_grad_to_false(self.bn3)
 
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
-        if self.downsample is not None:
-            self.scale_downsample = ScaleLayer(size=planes*4)
         self.stride = stride
 
     def forward(self, x):
@@ -226,21 +223,17 @@ class Bottleneck(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = self.scale_conv1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
-        out = self.scale_conv2(out)
         out = self.relu(out)
 
         out = self.conv3(out)
         out = self.bn3(out)
-        out = self.scale_conv3(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
-            residual = self.scale_downsample(residual)
 
         out += residual
         out = self.relu(out)
@@ -256,7 +249,7 @@ class ResNet(nn.Module):
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=1, padding=3,
                                bias=False)
         self.bn_conv1 = nn.BatchNorm2d(64)
-        self.scale_conv1 = ScaleLayer(size=64)
+        set_require_grad_to_false(self.bn_conv1)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)
 
@@ -314,6 +307,7 @@ class ResNet(nn.Module):
                           kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(planes * block.expansion),
             )
+            set_require_grad_to_false(downsample[1])
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample, special_case=special_case))
@@ -326,7 +320,6 @@ class ResNet(nn.Module):
     def forward(self, x, for_vis=False):
         x = self.conv1(x)
         x = self.bn_conv1(x)
-        x = self.scale_conv1(x)
         x = self.relu(x) # BS X 64 X 352 X 352
         score_feats1 = self.score_edge_side1(x) # BS X 1 X 352 X 352
         
@@ -378,10 +371,10 @@ def CASENet_resnet101(pretrained=False, num_classes=20):
 if __name__ == "__main__":
     model = CASENet_resnet101(pretrained=False, num_classes=20)
    
-    # npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
-    # loaded_model_path = "../official_models/trained_CASENet.pth.tar"
-    npy_folder = "/ais/gobi4/fashion/edge_detection/models/init_model.npz"
-    loaded_model_path = "../official_models/Init_CASENet.pth.tar"
+    npy_folder = "/ais/gobi4/fashion/edge_detection/models/CASENet_trained_model.npz"
+    loaded_model_path = "../official_models/trained_CASENet.pth.tar"
+    # npy_folder = "/ais/gobi4/fashion/edge_detection/models/init_model.npz"
+    # loaded_model_path = "../official_models/Init_CASENet.pth.tar"
     layer_to_name_dict = gen_mapping_layer_name(model)
     load_npy_to_layer(model, layer_to_name_dict, npy_folder, loaded_model_path)
     
