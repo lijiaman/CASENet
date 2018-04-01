@@ -54,9 +54,10 @@ class SBDData(data.Dataset):
         np_data = self.h5_f['data/'+label_name.replace('/', '_').replace('bin', 'npy')]
 
         label_data = []
-        for k in xrange(np_data.shape[2]):
-            if np_data[:,:,k].sum() > 0:
-                label_tensor = self.label_transform(torch.from_numpy(np_data[:, :, k]).unsqueeze(0).float())
+        num_cls = np_data.shape[2]
+        for k in xrange(num_cls):
+            if np_data[:,:,num_cls-1-k].sum() > 0: # The order is reversed to be consistent with class name idx in official.
+                label_tensor = self.label_transform(torch.from_numpy(np_data[:, :, num_cls-1-k]).unsqueeze(0).float())
             else: # ALL zeros, don't need transform, maybe a bit faster?..
                 label_tensor = torch.zeros(1, self.input_size, self.input_size).float()
             label_data.append(label_tensor.squeeze(0).long())

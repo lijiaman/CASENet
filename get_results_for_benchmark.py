@@ -24,16 +24,6 @@ from prep_dataset.prep_SBD_dataset import ToTorchFormatTensor
 
 import utils.utils as utils
 
-def shifting(bitlist):
-    """
-    From https://stackoverflow.com/questions/12461361/bits-list-to-integer-in-python
-    Convert a binary list to int
-    """
-    out = 0
-    for bit in bitlist:
-        out = (out << 1) | bit
-    return out
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(sys.argv[0])
     parser.add_argument('-m', '--model', type=str,

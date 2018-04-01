@@ -42,10 +42,16 @@ def main():
 
     title = 'train|val loss '
     init = np.NaN
-    win = viz.line(
-        X=np.column_stack((np.array([init]), np.array([init]), np.array([init]), np.array([init]))),
-        Y=np.column_stack((np.array([init]), np.array([init]), np.array([init]), np.array([init]))),
-        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train_feats5', 'train_fusion', 'val_feats5', 'val_fusion']},
+    win_feats5 = viz.line(
+        X=np.column_stack((np.array([init]), np.array([init]))),
+        Y=np.column_stack((np.array([init]), np.array([init]))),
+        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train_feats5', 'val_feats5']},
+    )
+    
+    win_fusion = viz.line(
+        X=np.column_stack((np.array([init]), np.array([init]))),
+        Y=np.column_stack((np.array([init]), np.array([init]))),
+        opts={'title': title, 'xlabel': 'Iter', 'ylabel': 'Loss', 'legend': ['train_fusion', 'val_fusion']},
     )
 
     train_loader, val_loader = prep_SBD_dataset.get_dataloader(args)
@@ -75,9 +81,9 @@ def main():
         curr_lr = utils.adjust_learning_rate(args.lr, args, optimizer, global_step, args.lr_steps)
 
         global_step = model_play.train(args, train_loader, model, optimizer, epoch, curr_lr,\
-                                 win, viz, global_step)
+                                 win_feats5, win_fusion, viz, global_step)
     
-        curr_loss = model_play.validate(args, val_loader, model, epoch, win, viz, global_step)
+        curr_loss = model_play.validate(args, val_loader, model, epoch, win_feats5, win_fusion, viz, global_step)
         
         # Always store current model to avoid process crashed by accident.
         utils.save_checkpoint({

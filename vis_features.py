@@ -150,9 +150,10 @@ if __name__ == "__main__":
         # Load numpy from hdf5 for gt.
         np_data = h5_f['data/'+ori_test_list[idx_img].replace('image', 'label').replace('/', '_').replace('png', 'npy')]
         label_data = []
-        for k in xrange(np_data.shape[2]):
-            if np_data[:,:,k].sum() > 0:
-                label_tensor = label_transform(torch.from_numpy(np_data[:, :, k]).unsqueeze(0).float())
+        num_cls = np_data.shape[2]
+        for k in xrange(num_cls):
+            if np_data[:,:,num_cls-1-k].sum() > 0:
+                label_tensor = label_transform(torch.from_numpy(np_data[:, :, num_cls-1-k]).unsqueeze(0).float())
             else: # ALL zeros, don't need transform, maybe a bit faster?..
                 label_tensor = torch.zeros(1, input_size, input_size).float()
             label_data.append(label_tensor.squeeze(0).long())
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             rgb[:,:,2] = (b/255.0)
             if not os.path.exists(os.path.join(args.output_dir, img_base_name_noext)):
                 os.makedirs(os.path.join(args.output_dir, img_base_name_noext))
-            plt.imsave(os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_fused_pred_'+cls_names[num_cls-idx_cls-1]+'.png'), rgb) 
+            plt.imsave(os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_fused_pred_'+cls_names[idx_cls]+'.png'), rgb) 
         
         gt_data = label_data.numpy() 
         for idx_cls in xrange(num_cls):
@@ -225,7 +226,7 @@ if __name__ == "__main__":
             rgb[:,:,0] = (r/255.0)
             rgb[:,:,1] = (g/255.0)
             rgb[:,:,2] = (b/255.0)
-            plt.imsave(os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_gt_'+cls_names[num_cls-idx_cls-1]+'.png'), rgb) 
+            plt.imsave(os.path.join(args.output_dir, img_base_name_noext, img_base_name_noext+'_gt_'+cls_names[idx_cls]+'.png'), rgb) 
     
         print 'processed: '+test_lst[idx_img]
     

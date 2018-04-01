@@ -17,7 +17,7 @@ sys.path.append("../")
 import utils.utils as utils
 from utils.utils import AverageMeter
 
-def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global_step):
+def train(args, train_loader, model, optimizer, epoch, curr_lr, win_feats5, win_fusion, viz, global_step):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     feats5_losses = AverageMeter()
@@ -51,8 +51,8 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win, viz, global
         # Only plot the fused feats loss.
         trn_feats5_loss = feats5_loss.clone().cpu().data.numpy()[0]
         trn_fusion_loss = fused_feats_loss.clone().cpu().data.numpy()[0]
-        viz.line(win=win, name='train_feats5', update='append', X=np.array([global_step]), Y=np.array([trn_feats5_loss]))
-        viz.line(win=win, name='train_fusion', update='append', X=np.array([global_step]), Y=np.array([trn_fusion_loss]))
+        viz.line(win=win_feats5, name='train_feats5', update='append', X=np.array([global_step]), Y=np.array([trn_feats5_loss]))
+        viz.line(win=win_fusion, name='train_fusion', update='append', X=np.array([global_step]), Y=np.array([trn_fusion_loss]))
 
         optimizer.zero_grad()
         loss.backward()
@@ -121,8 +121,8 @@ def validate(args, val_loader, model, epoch, win, viz, global_step):
                   .format(epoch, i, len(val_loader), batch_time=batch_time,
                    data_time=data_time, total_loss=total_losses))
         
-    viz.line(win=win, name='val_feats5', update='append', X=np.array([global_step]), Y=np.array([feats5_losses.avg]))
-    viz.line(win=win, name='val_fusion', update='append', X=np.array([global_step]), Y=np.array([fusion_losses.avg]))
+    viz.line(win=win_feats5, name='val_feats5', update='append', X=np.array([global_step]), Y=np.array([feats5_losses.avg]))
+    viz.line(win=win_fusion, name='val_fusion', update='append', X=np.array([global_step]), Y=np.array([fusion_losses.avg]))
     
     return fusion_losses.avg 
 

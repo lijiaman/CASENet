@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import time
-
 import PIL
 from PIL import Image
 
@@ -60,9 +59,9 @@ def get_dataloader(args):
     # Define data files path.
     root_img_folder = "/ais/gobi4/fashion/edge_detection/data_aug" 
     root_label_folder = "/ais/gobi4/fashion/edge_detection/data_aug"
-    train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_train.txt"
+    train_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_train_aug.txt"
     val_anno_txt = "/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt"
-    train_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/train_label_binary_np.h5"
+    train_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/train_aug_label_binary_np.h5"
     val_hdf5_file = "/ais/gobi6/jiaman/github/CASENet/utils/test_label_binary_np.h5"
 
     input_size = 352
