@@ -78,9 +78,9 @@ if __name__ == "__main__":
 
     # Define normalization for data    
     normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])
+    crop_size = 512
     
     img_transform = transforms.Compose([
-                    transforms.Resize([352, 352]),
                     RGB2BGR(roll=True),
                     ToTorchFormatTensor(div=False),
                     normalize,
@@ -88,24 +88,31 @@ if __name__ == "__main__":
     
     for idx_img in xrange(len(test_lst)):
         img = Image.open(test_lst[idx_img]).convert('RGB')
-        processed_img = img_transform(img).unsqueeze(0)
-        processed_img = utils.check_gpu(0, processed_img)    
-        score_feats5, score_fuse_feats = model(processed_img) # 1 X 20 X 352 X 352
+        processed_img = img_transform(img).unsqueeze(0) # 1 X 3 X H X W
+        height = processed_img.size()[2]
+        width = processed_img.size()[3]
+        if crop_size < height or crop_size < width:
+            raise ValueError("Input image size must be smaller than crop size!")
+        pad_h = crop_size - height
+        pad_w = crop_size - width
+        padded_processed_img = F.pad(processed_img, (0, pad_w, 0, pad_h), "constant", 0).data
+        processed_img_var = utils.check_gpu(0, padded_processed_img)    
+        score_feats5, score_fuse_feats = model(processed_img_var) # 1 X 20 X CROP_SIZE X CROP_SIZE
         
-        score_output = F.sigmoid(score_fuse_feats.transpose(1,3).transpose(1,2)).squeeze(0) # H X W X 20
-        score_pred_flag = (score_output>0.5)
-        # Convert binary prediction to uint32
-        im_arr = np.empty((score_fuse_feats.size()[2], score_fuse_feats.size()[3]), np.uint32)
-        for i in xrange(score_fuse_feats.size()[2]):
-            for j in xrange(score_fuse_feats.size()[3]):
-                print("ori_binary list:{0}".format(list(score_pred_flag[i, j, :].data.cpu().numpy())))
-                im_arr[i, j] = np.uint32(shifting(list(score_pred_flag[i, j].data.cpu().numpy().astype(np.int))))
-                print("value:{0}".format(np.uint32(shifting(list(score_pred_flag[i, j].squeeze(0).data.cpu().numpy().astype(np.int))))))
-                print("binary value:{0}".format(bin(np.uint32(shifting(list(score_pred_flag[i, j].squeeze(0).data.cpu().numpy().astype(np.int)))))))
-        # Store value into img
-        img_base_name_noext = os.path.splitext(os.path.basename(test_lst[idx_img]))[0]
-        imsave(os.path.join(args.output_dir, img_base_name_noext+'.bmp'), im_arr)
-        print 'processed: '+test_lst[idx_img]
+        score_output = F.sigmoid(score_fuse_feats.transpose(1,3).transpose(1,2)).squeeze(0)[:height, :width, :] # H X W X 20
+        for cls_idx in xrange(num_cls):
+            # Convert binary prediction to uint8
+            im_arr = np.empty((height, width), np.uint8)
+            for i in xrange(height):
+                for j in xrange(width):
+                    im_arr[i,j] = (score_output[i,j,cls_idx])*255.0
+            
+            # Store value into img
+            img_base_name_noext = os.path.splitext(os.path.basename(test_lst[idx_img]))[0]
+            if not os.path.exists(os.path.join(args.output_dir, str(cls_idx))):
+                os.makedirs(os.path.join(args.output_dir, str(cls_idx)))
+            imsave(os.path.join(args.output_dir, str(cls_idx), img_base_name_noext+'.bmp'), im_arr)
+            print 'processed: '+test_lst[idx_img]
     
     print 'Done!'
 
