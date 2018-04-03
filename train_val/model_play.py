@@ -77,7 +77,7 @@ def train(args, train_loader, model, optimizer, epoch, curr_lr, win_feats5, win_
 
     return global_step
 
-def validate(args, val_loader, model, epoch, win, viz, global_step):
+def validate(args, val_loader, model, epoch, win_feats5, win_fusion, viz, global_step):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     feats5_losses = AverageMeter()

@@ -67,6 +67,10 @@ def get_dataloader(args):
     input_size = 352
     normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])
 
+    train_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size), transforms.RandomHorizontalFlip()])
+    train_label_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size, interpolation=PIL.Image.NEAREST), \
+                                transforms.RandomHorizontalFlip()])
+
     train_dataset = SBDData(
         root_img_folder,
         root_label_folder,
@@ -75,14 +79,16 @@ def get_dataloader(args):
         input_size,
         cls_num=args.cls_num,
         img_transform = transforms.Compose([
-                        transforms.Resize([input_size, input_size]),
+                        # transforms.Resize([input_size, input_size]),
+                        train_augmentation,
                         RGB2BGR(roll=True),
                         ToTorchFormatTensor(div=False),
                         normalize,
                         ]),
         label_transform = transforms.Compose([
                         transforms.ToPILImage(),
-                        transforms.Resize([input_size, input_size], interpolation=PIL.Image.NEAREST),
+                        train_augmentation,
+                        # transforms.Resize([input_size, input_size], interpolation=PIL.Image.NEAREST),
                         transforms.ToTensor(),
                         ]))
     train_loader = torch.utils.data.DataLoader(

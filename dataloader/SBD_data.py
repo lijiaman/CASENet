@@ -12,6 +12,7 @@ import zipfile
 import shutil
 import pdb 
 import h5py
+import random
 
 class SBDData(data.Dataset):
     
@@ -47,8 +48,13 @@ class SBDData(data.Dataset):
         label_name = self.idx2name_dict[index]['label']
         img_path = os.path.join(self.img_folder, img_name)
 
+        # Set the same random seed for img and label transform
+        seed = np.random.randint(2147483647)
+
         # Load img into tensor
         img = Image.open(img_path).convert('RGB') # W X H
+
+        random.seed(seed)
         processed_img = self.img_transform(img) # 3 X H X W
 
         np_data = self.h5_f['data/'+label_name.replace('/', '_').replace('bin', 'npy')]
@@ -57,6 +63,7 @@ class SBDData(data.Dataset):
         num_cls = np_data.shape[2]
         for k in xrange(num_cls):
             if np_data[:,:,num_cls-1-k].sum() > 0: # The order is reversed to be consistent with class name idx in official.
+                random.seed(seed) # Before transform, set random seed same as img transform, to keep consistent!
                 label_tensor = self.label_transform(torch.from_numpy(np_data[:, :, num_cls-1-k]).unsqueeze(0).float())
             else: # ALL zeros, don't need transform, maybe a bit faster?..
                 label_tensor = torch.zeros(1, self.input_size, self.input_size).float()
