@@ -65,6 +65,10 @@ if __name__ == "__main__":
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
+        for cls_idx in xrange(num_cls):
+            dir_path = os.path.join(args.output_dir, str(cls_idx))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
 
     # Define normalization for data    
     normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])

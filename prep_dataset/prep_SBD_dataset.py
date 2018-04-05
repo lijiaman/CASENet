@@ -87,7 +87,7 @@ def get_dataloader(args):
                         ]),
         label_transform = transforms.Compose([
                         transforms.ToPILImage(),
-                        train_augmentation,
+                        train_label_augmentation,
                         # transforms.Resize([input_size, input_size], interpolation=PIL.Image.NEAREST),
                         transforms.ToTensor(),
                         ]))

@@ -17,15 +17,15 @@ def convert_num_to_bitfield(label_data, h, w, root_folder, label_png_name, cls_n
         padded_bit_tensor = torch.cat((torch.zeros(cls_num-actual_len).byte(), bit_tensor.byte()), dim=0)
         all_bit_tensor_list.append(padded_bit_tensor)
     all_bit_tensor_list = torch.stack(all_bit_tensor_list).view(h, w, cls_num)
-    label_png_dir = label_png_name.split('/')[0].split('.')[0] # eg: 2008_002687
+    label_png_dir = os.path.join("label_img", label_png_name.replace('/', '_')) # eg: label_img/label_img_test_2008_002687
+    print("label_png_dir:{0}".format(label_png_dir))
     if not os.path.exists(os.path.join(root_folder, label_png_dir)):
         os.makedirs(os.path.join(root_folder, label_png_dir))
     for cls_idx in xrange(cls_num):
-        label_png_name = label_png_name.split('/)
-        imsave(os.path.join(root_folder, label_png_name), all_bit_tensor_list.numpy())
+        imsave(os.path.join(root_folder, label_png_dir, str(cls_idx)+'.png'), all_bit_tensor_list[:,:,cls_idx].numpy())
 
 if __name__ == "__main__":
-    f = open("/ais/gobi4/fashion/edge_detection/data_aug/list_train_aug.txt", 'r')
+    f = open("/ais/gobi4/fashion/edge_detection/data_aug/list_test.txt", 'r')
     lines = f.readlines()
     root_folder = "/ais/gobi4/fashion/edge_detection/data_aug/"
     cnt = 0
