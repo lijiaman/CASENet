@@ -98,7 +98,6 @@ if __name__ == "__main__":
             # Convert binary prediction to uint8
             im_arr = np.empty((height, width), np.uint8)
             im_arr = (score_output[:,:,cls_idx].data.cpu().numpy())*255.0
-            print("im_arr.shape:{0}".format(im_arr.shape))
              
             # Store value into img
             img_base_name_noext = os.path.splitext(os.path.basename(test_lst[idx_img]))[0]
