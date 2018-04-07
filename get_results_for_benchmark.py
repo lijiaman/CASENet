@@ -97,10 +97,6 @@ if __name__ == "__main__":
         for cls_idx in xrange(num_cls):
             # Convert binary prediction to uint8
             im_arr = np.empty((height, width), np.uint8)
-            # for i in xrange(height):
-            #    for j in xrange(width):
-            #        im_arr[i,j] = (score_output[i,j,cls_idx])*255.0
-            print("score_output.size:{0}".format(score_output[:,:,cls_idx].size()))
             im_arr = (score_output[:,:,cls_idx].data.cpu().numpy())*255.0
             print("im_arr.shape:{0}".format(im_arr.shape))
              
@@ -108,7 +104,7 @@ if __name__ == "__main__":
             img_base_name_noext = os.path.splitext(os.path.basename(test_lst[idx_img]))[0]
             if not os.path.exists(os.path.join(args.output_dir, str(cls_idx))):
                 os.makedirs(os.path.join(args.output_dir, str(cls_idx)))
-            imsave(os.path.join(args.output_dir, str(cls_idx), img_base_name_noext+'.bmp'), im_arr)
+            imsave(os.path.join(args.output_dir, str(cls_idx), img_base_name_noext+'.png'), im_arr)
             print 'processed: '+test_lst[idx_img]
     
     print 'Done!'

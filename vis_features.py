@@ -94,12 +94,12 @@ if __name__ == "__main__":
     # load input path
     if os.path.exists(args.image_list):
         with open(args.image_list) as f:
-            ori_test_lst = [x.strip().split()[0] for x in f.readlines()]
+            ori_test_list = [x.strip().split()[0] for x in f.readlines()]
             if args.image_dir!='':
                 test_lst = [
                     args.image_dir+x if os.path.isabs(x)
                     else os.path.join(args.image_dir, x)
-                    for x in ori_test_lst]
+                    for x in ori_test_list]
     else:
         image_file = os.path.join(args.image_dir, args.image_file)
         if os.path.exists(image_file):

@@ -132,15 +132,15 @@ def WeightedMultiLabelSigmoidLoss(model_output, target):
     target: BS X H X W X NUM_CLASSES 
     """
     # Calculate weight. (edge pixel and non-edge pixel)
-    weight_sum = utils.check_gpu(0, target.sum(dim=1).sum(dim=1).float().data) # BS X NUM_CLASSES
+    weight_sum = utils.check_gpu(0, target.sum(dim=1).sum(dim=1).sum(dim=1).float().data) # BS
     edge_weight = utils.check_gpu(0, weight_sum.data / float(target.size()[1]*target.size()[2]))
     non_edge_weight = utils.check_gpu(0, (target.size()[1]*target.size()[2]-weight_sum.data) / float(target.size()[1]*target.size()[2]))
 
     one_sigmoid_out = F.sigmoid(model_output)
     zero_sigmoid_out = 1 - one_sigmoid_out
     target = target.transpose(1,3).transpose(2,3).float() # BS X NUM_CLASSES X H X W
-    loss = -non_edge_weight.unsqueeze(2).unsqueeze(3)*target*torch.log(one_sigmoid_out.clamp(min=1e-10)) - \
-            edge_weight.unsqueeze(2).unsqueeze(3)*(1-target)*torch.log(zero_sigmoid_out.clamp(min=1e-10))
+    loss = -non_edge_weight.unsqueeze(1).unsqueeze(2).unsqueeze(3)*target*torch.log(one_sigmoid_out.clamp(min=1e-10)) - \
+            edge_weight.unsqueeze(1).unsqueeze(2).unsqueeze(3)*(1-target)*torch.log(zero_sigmoid_out.clamp(min=1e-10))
     
     return loss.mean(dim=0).sum()
 
