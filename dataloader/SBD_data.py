@@ -70,7 +70,8 @@ class SBDData(data.Dataset):
                 label_tensor = torch.zeros(1, self.input_size, self.input_size).float()
             label_data.append(label_tensor.squeeze(0).long())
         label_data = torch.stack(label_data).transpose(0,1).transpose(1,2) # N X H X W -> H X W X N
-     
+        print("label_data.sum():{0}".format(label_data.sum()))
+        print("label_data.max():{0}".format(label_data.max()))     
         return processed_img, label_data
         # processed_img: 3 X 352(H) X 352(W)
         # label tensor: 352(H) X 352(W) X 20

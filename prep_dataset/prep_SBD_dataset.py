@@ -67,8 +67,8 @@ def get_dataloader(args):
     input_size = 352
     normalize = transforms.Normalize(mean=[104.008, 116.669, 122.675], std=[1, 1, 1])
 
-    train_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size, scale=(1.0,1.0), ratio=(1.0,1.0)), transforms.RandomHorizontalFlip()])
-    train_label_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size, scale=(1.0,1.0), ratio=(1.0,1.0), interpolation=PIL.Image.NEAREST), \
+    train_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size, scale=(0.75,1.0), ratio=(0.75,1.0)), transforms.RandomHorizontalFlip()])
+    train_label_augmentation = transforms.Compose([transforms.RandomResizedCrop(input_size, scale=(0.75,1.0), ratio=(0.75,1.0), interpolation=PIL.Image.NEAREST), \
                                 transforms.RandomHorizontalFlip()])
 
     train_dataset = SBDData(
